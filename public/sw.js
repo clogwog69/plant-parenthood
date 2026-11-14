@@ -1,5 +1,5 @@
 // Minimal offline shell: network first, fall back to cache.
-const CACHE = 'sprout-v1';
+const CACHE = 'sprout-v2';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (e) => {

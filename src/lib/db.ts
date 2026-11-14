@@ -33,6 +33,7 @@ export const allPlants = () => run<Plant[]>('plants', 'readonly', (s) => s.getAl
 export const putPlant = (p: Plant) => run('plants', 'readwrite', (s) => s.put(p));
 export const deletePlant = (id: string) => run('plants', 'readwrite', (s) => s.delete(id));
 export const putPhoto = (p: Photo) => run('photos', 'readwrite', (s) => s.put(p));
+export const photoIds = () => run<IDBValidKey[]>('photos', 'readonly', (s) => s.getAllKeys()).then((k) => k.map(String));
 export const getPhoto = (id: string) => run<Photo | undefined>('photos', 'readonly', (s) => s.get(id));
 
 export async function deletePhotosFor(plantId: string): Promise<void> {

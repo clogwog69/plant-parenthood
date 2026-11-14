@@ -1,11 +1,19 @@
 import { Camera, Check, CloudRain, Droplet, Flame, MapPin, Scissors, Shovel, Snowflake, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { go } from '../App';
-import { alertsFor, allTasks, dueLabel, plantName, seasonFor } from '../lib/care';
+import { DAY, alertsFor, allTasks, dueLabel, plantName, seasonFor, startOfDay } from '../lib/care';
+import { syncAvailable } from '../lib/sync';
 import type { Plant, Task } from '../lib/types';
 import { describe } from '../lib/weather';
 import { useStore } from '../store';
-import { Avatar, LocationSheet, SkyIcon } from '../ui/bits';
+import { Avatar, HouseholdSheet, LocationSheet, SkyIcon } from '../ui/bits';
+
+const DID = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', added: 'added' };
+
+function when(t: number): string {
+  const time = new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return t >= startOfDay(Date.now()) ? time : `Yesterday, ${time}`;
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -67,8 +75,20 @@ function TaskRow({ task, plant, upcoming }: { task: Task; plant: Plant; upcoming
 }
 
 export function Today() {
-  const { plants, weather, weatherFailed, location } = useStore();
+  const { plants, weather, weatherFailed, location, house } = useStore();
   const [sheet, setSheet] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const lately = useMemo(() => {
+    if (!house) return [];
+    const since = startOfDay(Date.now()) - DAY;
+    return plants
+      .flatMap((p) => [
+        ...p.events.filter((e) => e.by && e.date >= since).map((e) => ({ plant: p, date: e.date, by: e.by!, did: DID[e.type] })),
+        ...p.checkins.filter((c) => c.by && c.date >= since).map((c) => ({ plant: p, date: c.date, by: c.by!, did: 'checked on' })),
+      ])
+      .sort((a, b) => b.date - a.date)
+      .slice(0, 6);
+  }, [plants, house]);
   const byId = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
   const tasks = useMemo(() => allTasks(plants, weather, location), [plants, weather, location]);
   const alerts = useMemo(() => alertsFor(plants, weather), [plants, weather]);
@@ -137,15 +157,11 @@ export function Today() {
 
       {plants.length === 0 ? (
         <section className="empty">
-          <svg viewBox="0 0 120 120" aria-hidden="true">
-            <path d="M60 104V58" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-            <path d="M60 70c0-18-12-28-30-28 0 18 12 28 30 28Z" fill="var(--green-soft)" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
-            <path d="M60 58c0-20 13-32 32-32 0 20-13 32-32 32Z" fill="var(--green-soft)" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
-            <path d="M38 104h44" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-          </svg>
+          <img className="empty-logo" src="./logo.png" alt="" width="150" height="150" />
           <h2>Start with one plant</h2>
-          <p>Add the basil on the windowsill or the lemon tree out the back. Sprout will tell you when it needs water, a trim or a bigger pot.</p>
+          <p>Add the basil on the windowsill or the lemon tree out the back. Plant Parenthood will tell you when it needs water, a trim or a bigger pot.</p>
           <a className="btn btn-primary" href="#/add">Add your first plant</a>
+          {syncAvailable && !house && <button type="button" className="link" onClick={() => setSharing(true)}>Joining someone's household? Enter their code</button>}
         </section>
       ) : (
         <>
@@ -166,7 +182,22 @@ export function Today() {
         </>
       )}
 
+      {lately.length > 0 && (
+        <section>
+          <h2 className="section-title">Lately</h2>
+          <ul className="lately">
+            {lately.map((l) => (
+              <li key={`${l.plant.id}${l.date}${l.did}`}>
+                <span><b>{l.by}</b> {l.did} <a href={`#/plant/${l.plant.id}`}>{plantName(l.plant)}</a></span>
+                <small>{when(l.date)}</small>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {sheet && <LocationSheet onClose={() => setSheet(false)} />}
+      {sharing && <HouseholdSheet onClose={() => setSharing(false)} />}
     </main>
   );
 }

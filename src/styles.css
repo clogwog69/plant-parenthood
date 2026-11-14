@@ -112,7 +112,7 @@ h1 { font: 600 32px/1.1 var(--serif); letter-spacing: -0.02em; }
 
 /* Empty */
 .empty { text-align: center; padding: 28px 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.empty svg { width: 110px; color: var(--green); }
+.empty-logo { width: 150px; height: 150px; }
 .empty h2 { font: 600 24px/1.2 var(--serif); }
 .empty p { color: var(--muted); max-width: 32ch; margin-bottom: 8px; }
 
@@ -257,3 +257,19 @@ h1 { font: 600 32px/1.1 var(--serif); letter-spacing: -0.02em; }
 .tabs a.on { color: var(--green); }
 .tabs .tab-add { width: 54px; height: 54px; border-radius: 50%; background: var(--clay); color: #fff; justify-content: center; box-shadow: 0 4px 12px rgba(196, 98, 58, .4); }
 .tabs .tab-add:active { transform: scale(.95); }
+
+/* Household */
+.house-bar { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); text-align: left; width: 100%; }
+.house-bar > svg:first-child { color: var(--green); flex: none; }
+.house-bar > svg:last-child { color: var(--muted); flex: none; }
+.house-bar span { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.house-bar b { font-weight: 600; font-size: 15px; }
+.house-bar small { font-size: 13px; color: var(--muted); }
+.invite { background: var(--green-soft); color: var(--green); border-radius: var(--r); padding: 14px 16px; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.invite small { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+.invite b { font: 600 28px/1.2 var(--serif); letter-spacing: .06em; user-select: all; }
+.lately { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
+.lately li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 14px; font-size: 15px; }
+.lately li + li { border-top: 1px solid var(--line); }
+.lately a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+.lately small { color: var(--muted); font-size: 13px; white-space: nowrap; }

@@ -76,6 +76,8 @@ export interface Checkin {
   signs: Sign[];
   advice: Advice[];
   note?: string;
+  /** Who did it, when the plant is shared with a household. */
+  by?: string;
 }
 
 export type EventType = 'watered' | 'repotted' | 'harvested' | 'added';
@@ -83,6 +85,7 @@ export type EventType = 'watered' | 'repotted' | 'harvested' | 'added';
 export interface PlantEvent {
   type: EventType;
   date: number;
+  by?: string;
 }
 
 export interface Plant {
@@ -94,6 +97,8 @@ export interface Plant {
   place: Place;
   potted: boolean;
   createdAt: number;
+  /** Last change on any phone; the newest copy wins when syncing. */
+  updatedAt?: number;
   thumb?: string;
   photoId?: string;
   lastWatered?: number;

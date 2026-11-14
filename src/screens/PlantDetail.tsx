@@ -9,7 +9,7 @@ import { useStore, usePhoto } from '../store';
 import { Avatar } from '../ui/bits';
 import { TaskIcon, taskTone, useTaskDone } from './Today';
 
-const EVENT: Record<EventType, string> = { watered: 'Watered', repotted: 'Repotted', harvested: 'Harvested', added: 'Added to Sprout' };
+const EVENT: Record<EventType, string> = { watered: 'Watered', repotted: 'Repotted', harvested: 'Harvested', added: 'Added to Plant Parenthood' };
 
 export function PlantDetail({ id }: { id: string }) {
   const { plants, weather, location, log, removePlant } = useStore();
@@ -28,9 +28,11 @@ export function PlantDetail({ id }: { id: string }) {
   const inSeason = g.harvest && (!g.harvest.seasons || g.harvest.seasons.includes(season));
 
   const journal = [
-    ...plant.checkins.map((c) => ({ date: c.date, checkin: c, event: null as EventType | null })),
-    ...plant.events.map((e) => ({ date: e.date, checkin: null, event: e.type as EventType | null })),
+    ...plant.checkins.map((c) => ({ date: c.date, checkin: c, event: null as EventType | null, by: c.by })),
+    ...plant.events.map((e) => ({ date: e.date, checkin: null, event: e.type as EventType | null, by: e.by })),
   ].sort((a, b) => b.date - a.date).slice(0, 40);
+
+  const wateredBy = plant.events.find((e) => e.type === 'watered' && e.date === plant.lastWatered)?.by;
 
   const waterHead = water.skipped ? 'Skip watering, rain is coming'
     : water.dueIn < 0 ? `Water now (${dueLabel(water.dueIn).toLowerCase()})`
@@ -60,7 +62,7 @@ export function PlantDetail({ id }: { id: string }) {
           <div>
             <b>{waterHead}</b>
             <p>{water.reason}</p>
-            {plant.lastWatered && <small>Last watered {ago(plant.lastWatered).toLowerCase()}</small>}
+            {plant.lastWatered && <small>Last watered {ago(plant.lastWatered).toLowerCase()}{wateredBy ? ` by ${wateredBy}` : ''}</small>}
           </div>
         </div>
         <div className="actions">
@@ -121,14 +123,14 @@ export function PlantDetail({ id }: { id: string }) {
             <li key={j.checkin.id} className="entry">
               {j.checkin.thumb ? <img src={j.checkin.thumb} alt="" /> : <Avatar plant={{ ...plant, thumb: undefined }} />}
               <div>
-                <b>Check-in <small>{ago(j.date)}</small></b>
+                <b>Check-in <small>{ago(j.date)}{j.by ? ` · ${j.by}` : ''}</small></b>
                 {j.checkin.signs.length > 0 && <p className="signs">{j.checkin.signs.map((s) => SIGN_LABEL[s]).join(' · ')}</p>}
                 {j.checkin.advice.map((a) => <p key={a.sign}><strong>{a.title}.</strong> {a.detail}</p>)}
                 {j.checkin.note && <p className="note">“{j.checkin.note}”</p>}
               </div>
             </li>
           ) : (
-            <li key={`${j.event}${j.date}${i}`} className="event"><span>{EVENT[j.event!]}</span><small>{ago(j.date)}</small></li>
+            <li key={`${j.event}${j.date}${i}`} className="event"><span>{EVENT[j.event!]}{j.by ? ` by ${j.by}` : ''}</span><small>{ago(j.date)}</small></li>
           ))}
         </ol>
       </section>

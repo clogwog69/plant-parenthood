@@ -1,8 +1,9 @@
-import { Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, Search, Sun, X } from 'lucide-react';
+import { Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, RefreshCw, Search, Share2, Sun, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { guideFor } from '../lib/guide';
 import { shoot, type Shot } from '../lib/photo';
+import { cleanCode, prettyCode } from '../lib/sync';
 import type { Location, Plant } from '../lib/types';
 import { currentPosition, searchPlaces, type Sky } from '../lib/weather';
 import { useStore } from '../store';
@@ -114,7 +115,7 @@ export function LocationSheet({ onClose }: { onClose(): void }) {
 
   return (
     <Sheet title="Where do your plants live?" onClose={onClose}>
-      <p className="muted">Sprout uses your local forecast to time watering, and to warn you about frost and heat.</p>
+      <p className="muted">Plant Parenthood uses your local forecast to time watering, and to warn you about frost and heat.</p>
       <button
         type="button" className="btn btn-soft wide" disabled={locating}
         onClick={() => {
@@ -135,6 +136,79 @@ export function LocationSheet({ onClose }: { onClose(): void }) {
         ))}
       </ul>
       {location && !q && <p className="muted small">Currently set to {location.name}.</p>}
+    </Sheet>
+  );
+}
+
+const SYNC_LABEL = { off: '', idle: 'Up to date', syncing: 'Syncing…', offline: 'Offline. Changes will send when you are back online.' };
+
+/** Create, join or look at the shared household. */
+export function HouseholdSheet({ onClose }: { onClose(): void }) {
+  const { house, me, plants, syncState, createHouse, joinHouse, leaveHouse, syncNow } = useStore();
+  const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [name, setName] = useState(me);
+  const [houseName, setHouseName] = useState('');
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  if (house) {
+    const pretty = prettyCode(house.code);
+    const text = `Join our plants on Plant Parenthood. Open ${window.location.href.split('#')[0]} then tap Household and enter the code ${pretty}`;
+    const share = async () => {
+      try {
+        if (navigator.share) await navigator.share({ text });
+        else { await navigator.clipboard.writeText(pretty); setCopied(true); }
+      } catch { /* closed the share sheet */ }
+    };
+    return (
+      <Sheet title={house.name} onClose={onClose}>
+        <p className="muted">Everyone with this code shares the same plants, photos and to-dos. Give it only to people in your household.</p>
+        <div className="invite">
+          <small>Invite code</small>
+          <b>{pretty}</b>
+        </div>
+        <button type="button" className="btn btn-primary wide" onClick={share}><Share2 size={18} /> {copied ? 'Code copied' : 'Invite someone'}</button>
+        <p className="muted small">{me ? `You are ${me}. ` : ''}{SYNC_LABEL[syncState]}</p>
+        <button type="button" className="btn btn-soft wide" onClick={syncNow}><RefreshCw size={16} /> Check for changes now</button>
+        <button
+          type="button" className="btn btn-danger"
+          onClick={() => { if (window.confirm('Leave this household? The plants stay on this phone but stop updating.')) { leaveHouse(); onClose(); } }}
+        >
+          Leave household
+        </button>
+      </Sheet>
+    );
+  }
+
+  const ready = name.trim().length > 0 && (mode === 'create' || cleanCode(code).length >= 10);
+  const submit = async () => {
+    setBusy(true); setNote('');
+    try {
+      if (mode === 'create') await createHouse(houseName, name);
+      else await joinHouse(code, name);
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : 'Something went wrong. Try again.');
+    }
+    setBusy(false);
+  };
+
+  return (
+    <Sheet title="Share with your household" onClose={onClose}>
+      <p className="muted">Look after the same plants together. When one of you waters, everyone sees it.</p>
+      <Segmented value={mode} onChange={setMode} options={[{ value: 'create', label: 'Start a household' }, { value: 'join', label: 'I have a code' }]} />
+      <label className="field"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your first name" maxLength={24} autoComplete="given-name" /></label>
+      {mode === 'create' ? (
+        <label className="field"><input value={houseName} onChange={(e) => setHouseName(e.target.value)} placeholder="Household name, like Home" maxLength={40} /></label>
+      ) : (
+        <label className="field"><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Invite code" autoCapitalize="characters" autoComplete="off" spellCheck={false} /></label>
+      )}
+      {note && <p className="muted small">{note}</p>}
+      <button type="button" className="btn btn-primary wide" disabled={!ready || busy} onClick={submit}>
+        {busy ? 'One moment…' : mode === 'create' ? 'Start household' : 'Join household'}
+      </button>
+      {plants.length > 0 && <p className="muted small">The {plants.length === 1 ? 'plant' : `${plants.length} plants`} already on this phone will be shared too.</p>}
     </Sheet>
   );
 }

@@ -1,14 +1,16 @@
-import { ChevronRight, Droplet, LayoutGrid, List } from 'lucide-react';
+import { ChevronRight, Droplet, LayoutGrid, List, Users } from 'lucide-react';
 import { useState } from 'react';
 import { dueLabel, plantName, waterPlan } from '../lib/care';
 import type { Plant } from '../lib/types';
 import { useStore } from '../store';
-import { Avatar, Segmented } from '../ui/bits';
+import { syncAvailable } from '../lib/sync';
+import { Avatar, HouseholdSheet, Segmented } from '../ui/bits';
 
 type Filter = 'all' | 'garden' | 'indoor';
 
 export function Plants() {
-  const { plants, view, setView, weather, location } = useStore();
+  const { plants, view, setView, weather, location, house, syncState } = useStore();
+  const [sharing, setSharing] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   const shown = plants.filter((p) => filter === 'all' || p.place === filter);
 
@@ -34,6 +36,18 @@ export function Plants() {
           <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Names only"><List size={18} /></button>
         </div>
       </header>
+
+      {syncAvailable && (
+        <button type="button" className="house-bar" onClick={() => setSharing(true)}>
+          <Users size={18} />
+          <span>
+            <b>{house ? house.name : 'Share with your household'}</b>
+            <small>{house ? (syncState === 'offline' ? 'Offline, will catch up later' : 'Shared household') : 'Look after the same plants together'}</small>
+          </span>
+          <ChevronRight size={18} />
+        </button>
+      )}
+      {sharing && <HouseholdSheet onClose={() => setSharing(false)} />}
 
       <Segmented
         value={filter} onChange={setFilter}

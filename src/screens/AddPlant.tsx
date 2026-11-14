@@ -53,7 +53,7 @@ export function AddPlant() {
       </header>
 
       <PhotoPicker shot={shot} onShot={setShot} label="Take a photo" />
-      <p className="hint">A photo is optional. Spotting the plant from the photo automatically is coming later, so for now tell Sprout what it is.</p>
+      <p className="hint">A photo is optional. Spotting the plant from the photo automatically is coming later, so for now tell us what it is.</p>
 
       <section className="group">
         <h2>What is it?</h2>
@@ -82,7 +82,7 @@ export function AddPlant() {
             )}
             {isCustom && (
               <div className="custom">
-                <p>{matches.length ? 'Not one of those?' : 'Sprout does not know that one yet.'} Pick the closest type and it will use sensible care for “{name}”.</p>
+                <p>{matches.length ? 'Not one of those?' : 'We do not know that one yet.'} Pick the closest type and it will use sensible care for “{name}”.</p>
                 <div className="chips">
                   {CATEGORIES.map((c) => (
                     <button key={c} type="button" className={'chip-btn' + (custom === c ? ' on' : '')} onClick={() => setCustom(c)}>{CATEGORY_LABEL[c]}</button>

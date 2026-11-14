@@ -1,5 +1,5 @@
 import { guideFor } from './guide';
-import type { Location, Plant, Season, Task, Weather } from './types';
+import type { Category, Location, Plant, Season, Task, Weather } from './types';
 
 export const DAY = 86_400_000;
 
@@ -141,6 +141,85 @@ export function repotStatus(plant: Plant, loc: Location | null, now = Date.now()
   return { due: false, note: 'Ready for a bigger pot, but wait until spring when it is growing again.' };
 }
 
+const GROW: Season[] = ['spring', 'summer'];
+const GROW_LONG: Season[] = ['spring', 'summer', 'autumn'];
+const FEED: Record<Category, { weeks: number; seasons: Season[]; what: string }> = {
+  herb: { weeks: 4, seasons: GROW_LONG, what: 'Liquid fertiliser or seaweed tonic at half strength, poured on damp soil. Too much makes herbs soft and less tasty.' },
+  vegetable: { weeks: 2, seasons: GROW_LONG, what: 'Liquid vegetable fertiliser. Switch to a tomato or fruit feed (high in potassium) once it flowers.' },
+  fruit: { weeks: 6, seasons: GROW_LONG, what: 'Citrus and fruit fertiliser scattered around the edge of the canopy, then watered in well.' },
+  houseplant: { weeks: 4, seasons: GROW, what: 'Liquid indoor plant food at half the strength on the bottle, on soil that is already damp.' },
+  succulent: { weeks: 8, seasons: GROW, what: 'Cactus and succulent feed at half strength. They need very little.' },
+  flower: { weeks: 3, seasons: GROW_LONG, what: 'Liquid flower fertiliser (high in potassium) to keep the blooms coming.' },
+  shrub: { weeks: 12, seasons: GROW, what: 'Slow-release granules scattered under the canopy and watered in.' },
+};
+
+export interface FeedPlan {
+  /** False outside the growing season, when feeding does more harm than good. */
+  inSeason: boolean;
+  dueIn: number;
+  weeks: number;
+  what: string;
+  note: string;
+}
+
+export function feedPlan(plant: Plant, loc: Location | null, now = Date.now()): FeedPlan {
+  const g = guideFor(plant.guideKey, plant.species);
+  const f = FEED[g.category];
+  const every = f.weeks * 7 * DAY;
+  const inSeason = f.seasons.includes(seasonFor(loc, now));
+  // Fresh potting mix carries a couple of weeks of food.
+  const last = plant.lastFed ?? plant.createdAt + 14 * DAY - every;
+  const dueIn = Math.max(0, dayDiff(last + every, now));
+  const rhythm = `every ${f.weeks === 1 ? 'week' : `${f.weeks} weeks`}`;
+  const note = !inSeason
+    ? `No feeding until ${f.seasons[0]}. It is resting, and fertiliser now just builds up in the soil.`
+    : dueIn <= 0
+      ? `Time for a feed. It likes one ${rhythm} while it is growing.`
+      : `Next feed ${dueLabel(dueIn).toLowerCase()}, then ${rhythm} while it is growing.`;
+  return { inSeason, dueIn, weeks: f.weeks, what: f.what, note };
+}
+
+export interface Spot {
+  title: string;
+  detail: string;
+}
+
+/** Where to put it: which window indoors, how much sun or shade outside. */
+export function placement(plant: Pick<Plant, 'guideKey' | 'species' | 'place' | 'potted'>, loc: Location | null): Spot {
+  const g = guideFor(plant.guideKey, plant.species);
+  const l = g.light.toLowerCase();
+  const sunny = isSouthern(loc) ? 'north' : 'south';
+  const level = /no direct/.test(l) ? 'shade'
+    : /low/.test(l) ? 'low'
+    : /indirect/.test(l) ? 'indirect'
+    : /direct sun|bright light|bright as/.test(l) ? 'some'
+    : /^(morning sun|part shade)|cool weather/.test(l) ? 'part'
+    : /part shade/.test(l) ? 'flex'
+    : 'full';
+  const extra: string[] = [];
+
+  if (plant.place === 'indoor') {
+    extra.push('Keep it away from heaters, air conditioners and cold draughts.');
+    const spot: Spot =
+      level === 'full' ? { title: 'Your sunniest window', detail: `Right on the sill of a ${sunny}-facing window, where it gets several hours of direct sun. Anywhere dimmer and it grows thin and leggy.` }
+      : level === 'some' ? { title: 'A bright windowsill', detail: `Beside an east or ${sunny}-facing window with a few hours of gentle direct sun, ideally in the morning.` }
+      : level === 'part' || level === 'flex' ? { title: 'Next to a bright window', detail: 'Within a metre of an east-facing window: morning sun, then bright shade for the rest of the day.' }
+      : level === 'low' ? { title: 'Almost anywhere indoors', detail: 'It copes with a hallway, bathroom or a corner a few metres from a window. It grows faster with more light, so move it closer if it sulks.' }
+      : { title: 'Bright, but out of the sunbeams', detail: `One to two metres back from a ${sunny} or east-facing window, or behind a sheer curtain. Direct sun through glass scorches the leaves.` };
+    return { title: spot.title, detail: [spot.detail, ...extra].join(' ') };
+  }
+
+  if (/wind/.test(l)) extra.push('Pick somewhere sheltered from strong wind.');
+  if (plant.potted) extra.push('Pots heat up fast, so slide it into shade during a heatwave.');
+  if (g.frostTender) extra.push('Move it under cover when frost is forecast.');
+  const spot: Spot =
+    level === 'full' ? { title: 'Full sun', detail: `An open spot with 6 or more hours of direct sun, on the ${sunny} side of the house or fence.` }
+    : level === 'flex' ? { title: 'Sun or part shade', detail: 'Happy with 4 to 6 hours of sun. Where summers are hot, afternoon shade stops it scorching.' }
+    : level === 'part' ? { title: 'Morning sun, afternoon shade', detail: 'The east side of the house or the edge of a tree, with 3 to 4 hours of sun before midday and shade after.' }
+    : { title: 'Bright shade', detail: 'Under a verandah, pergola or tree canopy: bright, but with no midday or afternoon sun on the leaves.' };
+  return { title: spot.title, detail: [spot.detail, ...extra].join(' ') };
+}
+
 export function tasksFor(plant: Plant, weather: Weather | null, loc: Location | null, now = Date.now()): Task[] {
   const g = guideFor(plant.guideKey, plant.species);
   const season = seasonFor(loc, now);
@@ -159,6 +238,11 @@ export function tasksFor(plant: Plant, weather: Weather | null, loc: Location | 
   const repot = repotStatus(plant, loc, now);
   if (repot?.due && !plant.todos.some((t) => t.kind === 'repot')) {
     tasks.push({ id: `${plant.id}:repot`, plantId: plant.id, kind: 'repot', title: 'Repot', reason: repot.note + ' Go one pot size up with fresh potting mix.', dueIn: 0 });
+  }
+
+  const feed = feedPlan(plant, loc, now);
+  if (feed.inSeason) {
+    tasks.push({ id: `${plant.id}:feed`, plantId: plant.id, kind: 'feed', title: 'Feed', reason: feed.what, dueIn: feed.dueIn });
   }
 
   const h = g.harvest;
@@ -181,12 +265,36 @@ export function tasksFor(plant: Plant, weather: Weather | null, loc: Location | 
   return tasks;
 }
 
-const ORDER: Record<Task['kind'], number> = { todo: 0, water: 1, harvest: 2, repot: 3, photo: 4 };
+const ORDER: Record<Task['kind'], number> = { todo: 0, water: 1, harvest: 2, feed: 3, repot: 4, photo: 5 };
 
 export function allTasks(plants: Plant[], weather: Weather | null, loc: Location | null, now = Date.now()): Task[] {
   return plants
     .flatMap((p) => tasksFor(p, weather, loc, now))
     .sort((a, b) => Math.max(a.dueIn, 0) - Math.max(b.dueIn, 0) || ORDER[a.kind] - ORDER[b.kind] || a.dueIn - b.dueIn);
+}
+
+export interface DigestDay {
+  date: string; // YYYY-MM-DD, local
+  items: string[];
+}
+
+const isoDay = (t: number) => {
+  const d = new Date(t);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/** The next week of jobs, in words, for the morning notification. */
+export function digest(plants: Plant[], weather: Weather | null, loc: Location | null, now = Date.now()): DigestDay[] {
+  const tasks = allTasks(plants, weather, loc, now).filter((t) => !t.skipped && t.kind !== 'photo');
+  const names = new Map(plants.map((p) => [p.id, plantName(p)]));
+  const days: DigestDay[] = [];
+  for (let d = 0; d < 7; d++) {
+    const items = tasks
+      .filter((t) => t.dueIn <= d)
+      .map((t) => (t.kind === 'water' || t.kind === 'feed' || t.kind === 'repot' ? `${t.title} ${names.get(t.plantId)}` : `${names.get(t.plantId)}: ${t.title.toLowerCase()}`));
+    days.push({ date: isoDay(now + d * DAY), items: items.slice(0, 12) });
+  }
+  return days;
 }
 
 export interface Alert {

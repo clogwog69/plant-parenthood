@@ -1,8 +1,9 @@
-import { Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, RefreshCw, Search, Share2, Sun, X } from 'lucide-react';
+import { Bell, BellOff, Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, RefreshCw, Search, Share2, Sun, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { guideFor } from '../lib/guide';
 import { shoot, type Shot } from '../lib/photo';
+import { disablePush, enablePush, needsHomeScreen, pushBlocked, pushIsOn, pushSupported } from '../lib/push';
 import { cleanCode, prettyCode } from '../lib/sync';
 import type { Location, Plant } from '../lib/types';
 import { currentPosition, searchPlaces, type Sky } from '../lib/weather';
@@ -69,6 +70,67 @@ export function PhotoPicker({ shot, onShot, label, className = '' }: { shot?: Sh
         }}
       />
     </>
+  );
+}
+
+/** A button that opens the camera or photo library and hands back a resized photo. */
+export function PhotoButton({ onShot, className = 'btn btn-soft', disabled, children }: { onShot(s: Shot): void; className?: string; disabled?: boolean; children: ReactNode }) {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <button type="button" className={className} disabled={disabled} onClick={() => input.current?.click()}>{children}</button>
+      <input
+        ref={input} type="file" accept="image/*" hidden
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file) return;
+          try { onShot(await shoot(file)); } catch { window.alert('That photo would not open. Try another.'); }
+        }}
+      />
+    </>
+  );
+}
+
+function Notifications() {
+  const { house, me } = useStore();
+  const [on, setOn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  useEffect(() => { void pushIsOn().then(setOn); }, []);
+  if (!house) return null;
+
+  if (!pushSupported()) {
+    return (
+      <div className="notif">
+        <BellOff size={20} />
+        <div>
+          <b>Notifications</b>
+          <p>{needsHomeScreen()
+            ? 'On an iPhone, first add this app to your Home Screen: tap the Share button in Safari, then "Add to Home Screen". Open it from there and come back here.'
+            : 'This browser cannot show notifications.'}</p>
+        </div>
+      </div>
+    );
+  }
+  const toggle = async () => {
+    setBusy(true); setNote('');
+    try {
+      if (on) { await disablePush(); setOn(false); }
+      else { await enablePush(house.code, me); setOn(true); }
+    } catch (e) { setNote(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
+    setBusy(false);
+  };
+  return (
+    <div className="notif">
+      {on ? <Bell size={20} /> : <BellOff size={20} />}
+      <div>
+        <b>{on ? 'Notifications are on' : 'Notifications'}</b>
+        <p>{on ? 'This phone gets a morning list of jobs, and a ping when someone else looks after a plant.' : 'Get a morning list of jobs, and a ping when someone else waters or checks a plant.'}</p>
+        {(note || pushBlocked()) && <p className="warn">{note || 'Notifications are blocked for this app. Allow them in your phone settings.'}</p>}
+        <button type="button" className="link" disabled={busy || on === null} onClick={toggle}>{busy ? 'One moment…' : on ? 'Turn off on this phone' : 'Turn on notifications'}</button>
+      </div>
+    </div>
   );
 }
 
@@ -143,9 +205,9 @@ export function LocationSheet({ onClose }: { onClose(): void }) {
 const SYNC_LABEL = { off: '', idle: 'Up to date', syncing: 'Syncing…', offline: 'Offline. Changes will send when you are back online.' };
 
 /** Create, join or look at the shared household. */
-export function HouseholdSheet({ onClose }: { onClose(): void }) {
+export function HouseholdSheet({ onClose, initial = 'create' }: { onClose(): void; initial?: 'create' | 'join' }) {
   const { house, me, plants, syncState, createHouse, joinHouse, leaveHouse, syncNow } = useStore();
-  const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [mode, setMode] = useState<'create' | 'join'>(initial);
   const [name, setName] = useState(me);
   const [houseName, setHouseName] = useState('');
   const [code, setCode] = useState('');
@@ -170,6 +232,7 @@ export function HouseholdSheet({ onClose }: { onClose(): void }) {
           <b>{pretty}</b>
         </div>
         <button type="button" className="btn btn-primary wide" onClick={share}><Share2 size={18} /> {copied ? 'Code copied' : 'Invite someone'}</button>
+        <Notifications />
         <p className="muted small">{me ? `You are ${me}. ` : ''}{SYNC_LABEL[syncState]}</p>
         <button type="button" className="btn btn-soft wide" onClick={syncNow}><RefreshCw size={16} /> Check for changes now</button>
         <button

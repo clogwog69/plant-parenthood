@@ -31,3 +31,24 @@ export const push = (code: string, plants: PushRow[]) => rpc<boolean>('sprout_pu
 export const setLocation = (code: string, location: Location | null) => rpc<boolean>('sprout_set_location', { p_code: code, p_location: location });
 export const putPhoto = (code: string, p: Photo) => rpc<boolean>('sprout_put_photo', { p_code: code, p_id: p.id, p_plant: p.plantId, p_data: p.dataUrl });
 export const getPhoto = (code: string, id: string) => rpc<Omit<Photo, 'id'> | null>('sprout_get_photo', { p_code: code, p_id: id });
+
+// --- Morning summary, photo help and notifications ---
+
+export class SetupError extends Error {}
+
+export const setDigest = (code: string, digest: unknown) => rpc<boolean>('sprout_set_digest', { p_code: code, p_digest: digest });
+export const ask = (code: string, kind: string, input: object, photo: string | null) =>
+  rpc<string | null>('sprout_ask', { p_code: code, p_kind: kind, p_input: input, p_photo: photo });
+export const answer = (code: string, id: string) =>
+  rpc<{ status: 'pending' | 'working' | 'done' | 'failed'; result: unknown; helper: boolean } | null>('sprout_answer', { p_code: code, p_id: id });
+
+/** Calls the "push" edge function, which sends the notifications. */
+export async function pushFn<T>(body: object): Promise<T> {
+  const res = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/push`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new SetupError(`push ${res.status}`);
+  return (await res.json()) as T;
+}

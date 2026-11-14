@@ -1,18 +1,23 @@
-import { Check, ChevronLeft, Search, X } from 'lucide-react';
+import { Check, ChevronLeft, MapPin, ScanSearch, ScanText, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { back, go } from '../App';
-import { DAY } from '../lib/care';
+import { aiMessage, runAI, type Identified, type TagRead } from '../lib/ai';
+import { DAY, placement } from '../lib/care';
 import { CATEGORY_LABEL, searchGuides, type Match } from '../lib/guide';
 import type { Shot } from '../lib/photo';
-import type { Category, Place } from '../lib/types';
+import type { Category, Place, TagInfo } from '../lib/types';
 import { useStore } from '../store';
-import { PhotoPicker, Segmented } from '../ui/bits';
+import { PhotoButton, PhotoPicker, Segmented } from '../ui/bits';
+import { TAG_FIELDS } from './PlantDetail';
 
 type Watered = 'today' | 'yesterday' | 'days' | 'unsure';
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
 
 export function AddPlant() {
-  const { addPlant } = useStore();
+  const { addPlant, house, location } = useStore();
+  const [tag, setTag] = useState<TagInfo>();
+  const [busy, setBusy] = useState<'identify' | 'tag' | null>(null);
+  const [aiNote, setAiNote] = useState('');
   const [shot, setShot] = useState<Shot>();
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<Match | null>(null);
@@ -27,6 +32,51 @@ export function AddPlant() {
   const isCustom = !picked && name.length > 1 && (matches.length === 0 || name.length > 4);
   const ready = !!picked || (isCustom && !!custom);
 
+  /** Fill in the "What is it?" box from a name the photo or tag gave us. */
+  const suggest = (found: string, category?: Category) => {
+    const hit = searchGuides(found)[0] ?? searchGuides(found.split(/\s+/).slice(-1)[0])[0];
+    if (hit) { setPicked({ guide: hit.guide, label: hit.label }); setQuery(''); return; }
+    setPicked(null);
+    setQuery(found);
+    if (category && CATEGORIES.includes(category)) setCustom(category);
+  };
+
+  const identify = async () => {
+    if (!shot) return;
+    setBusy('identify'); setAiNote('');
+    try {
+      const r = await runAI<Identified>('identify', {}, shot.full);
+      const found = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';
+      if (!found) setAiNote('Could not tell what that is. Try a clearer photo, or type the name.');
+      else {
+        suggest(found, r.category);
+        setAiNote(`That looks like ${found}${r.latin ? ` (${r.latin})` : ''}${r.confidence === 'low' ? ', but it is hard to be sure' : ''}. Change it below if that is wrong.`);
+      }
+    } catch (e) { setAiNote(aiMessage(e)); }
+    setBusy(null);
+  };
+
+  const scanTag = async (full: string) => {
+    setBusy('tag'); setAiNote('');
+    try {
+      const t = await runAI<TagRead>('tag', {}, full);
+      const next: TagInfo = { date: Date.now() };
+      if (typeof t.name === 'string' && t.name.trim()) next.name = t.name.trim().slice(0, 80);
+      for (const [k] of TAG_FIELDS) if (typeof t[k] === 'string' && t[k].trim()) next[k] = t[k].trim().slice(0, 400);
+      if (Object.keys(next).length < 2) setAiNote('Could not read anything on that tag. Try again closer up, in good light.');
+      else {
+        setTag(next);
+        if (next.name && !picked) suggest(next.name);
+        setAiNote(`Tag read${next.name ? `: ${next.name}` : ''}. Its details will be saved with the plant.`);
+      }
+    } catch (e) { setAiNote(aiMessage(e)); }
+    setBusy(null);
+  };
+
+  const spot = ready
+    ? placement({ guideKey: picked ? picked.guide.key : `custom:${custom}`, species: picked ? picked.label : name, place, potted: place === 'indoor' || potted === 'pot' }, location)
+    : null;
+
   const save = () => {
     if (!ready) return;
     const now = Date.now();
@@ -40,6 +90,7 @@ export function AddPlant() {
       potted: place === 'indoor' || potted === 'pot',
       lastWatered,
       shot,
+      tag,
     });
     window.history.replaceState(null, '', '#/plants');
     go(`/plant/${plant.id}`);
@@ -53,7 +104,21 @@ export function AddPlant() {
       </header>
 
       <PhotoPicker shot={shot} onShot={setShot} label="Take a photo" />
-      <p className="hint">A photo is optional. Spotting the plant from the photo automatically is coming later, so for now tell us what it is.</p>
+      {house ? (
+        <div className="scan-row">
+          <button type="button" className="btn btn-soft" disabled={!shot || !!busy} onClick={() => void identify()}>
+            <ScanSearch size={18} /> {busy === 'identify' ? 'Looking…' : 'Name it for me'}
+          </button>
+          <PhotoButton disabled={!!busy} onShot={(s) => void scanTag(s.full)}>
+            <ScanText size={18} /> {busy === 'tag' ? 'Reading…' : tag ? 'Tag saved' : 'Scan its tag'}
+          </PhotoButton>
+        </div>
+      ) : null}
+      <p className="hint">
+        {aiNote || (house
+          ? (busy ? 'This takes up to a minute.' : 'Take a photo and tap "Name it for me", or photograph the tag it came with.')
+          : 'A photo is optional. Once you share a household, the app can name the plant from its photo and read its tag.')}
+      </p>
 
       <section className="group">
         <h2>What is it?</h2>
@@ -99,6 +164,12 @@ export function AddPlant() {
         <Segmented value={place} onChange={setPlace} options={[{ value: 'garden', label: 'Garden' }, { value: 'indoor', label: 'Indoors' }]} />
         {place === 'garden' && (
           <Segmented value={potted} onChange={setPotted} options={[{ value: 'pot', label: 'In a pot' }, { value: 'ground', label: 'In the ground' }]} />
+        )}
+        {spot && (
+          <div className="spot">
+            <span className="spot-ico"><MapPin size={20} /></span>
+            <div><b>Best spot: {spot.title.charAt(0).toLowerCase() + spot.title.slice(1)}</b><p>{spot.detail}</p></div>
+          </div>
         )}
       </section>
 

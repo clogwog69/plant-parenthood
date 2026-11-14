@@ -1,14 +1,15 @@
-import { Camera, Check, CloudRain, Droplet, Flame, MapPin, Scissors, Shovel, Snowflake, Sparkles } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Bell, Camera, Check, CloudRain, Droplet, Flame, MapPin, Scissors, Shovel, Snowflake, Sparkles, Sprout, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { go } from '../App';
 import { DAY, alertsFor, allTasks, dueLabel, plantName, seasonFor, startOfDay } from '../lib/care';
+import { needsHomeScreen, pushIsOn, pushSupported } from '../lib/push';
 import { syncAvailable } from '../lib/sync';
 import type { Plant, Task } from '../lib/types';
 import { describe } from '../lib/weather';
 import { useStore } from '../store';
 import { Avatar, HouseholdSheet, LocationSheet, SkyIcon } from '../ui/bits';
 
-const DID = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', added: 'added' };
+const DID = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', fed: 'fed', added: 'added' };
 
 function when(t: number): string {
   const time = new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -28,6 +29,7 @@ export function TaskIcon({ task }: { task: Task }) {
   if (task.skipped) return <CloudRain size={15} />;
   if (kind === 'water') return <Droplet size={15} />;
   if (kind === 'repot') return <Shovel size={15} />;
+  if (kind === 'feed') return <Sprout size={15} />;
   if (kind === 'harvest' || kind === 'prune') return <Scissors size={15} />;
   if (kind === 'photo') return <Camera size={15} />;
   return <Sparkles size={15} />;
@@ -47,6 +49,7 @@ export function useTaskDone() {
     else if (task.kind === 'todo' && task.todo) completeTodo(task.plantId, task.todo.id);
     else if (task.kind === 'water') log(task.plantId, 'watered');
     else if (task.kind === 'repot') log(task.plantId, 'repotted');
+    else if (task.kind === 'feed') log(task.plantId, 'fed');
     else if (task.kind === 'harvest') log(task.plantId, 'harvested');
   };
 }
@@ -77,14 +80,23 @@ function TaskRow({ task, plant, upcoming }: { task: Task; plant: Plant; upcoming
 export function Today() {
   const { plants, weather, weatherFailed, location, house } = useStore();
   const [sheet, setSheet] = useState(false);
-  const [sharing, setSharing] = useState(false);
+  const [sharing, setSharing] = useState<false | 'create' | 'join'>(false);
+  const [nudge, setNudge] = useState(false);
+  useEffect(() => {
+    if (!house || localStorage.getItem('sprout.pushNudge')) { setNudge(false); return; }
+    if (needsHomeScreen()) { setNudge(true); return; }
+    if (!pushSupported()) return;
+    let off = false;
+    void pushIsOn().then((on) => { if (!off) setNudge(!on); });
+    return () => { off = true; };
+  }, [house, sharing]);
   const lately = useMemo(() => {
     if (!house) return [];
     const since = startOfDay(Date.now()) - DAY;
     return plants
       .flatMap((p) => [
         ...p.events.filter((e) => e.by && e.date >= since).map((e) => ({ plant: p, date: e.date, by: e.by!, did: DID[e.type] })),
-        ...p.checkins.filter((c) => c.by && c.date >= since).map((c) => ({ plant: p, date: c.date, by: c.by!, did: 'checked on' })),
+        ...p.checkins.filter((c) => c.by && c.date >= since).map((c) => ({ plant: p, date: c.date, by: c.by!, did: c.kind === 'photo' ? 'added a photo of' : 'checked on' })),
       ])
       .sort((a, b) => b.date - a.date)
       .slice(0, 6);
@@ -148,6 +160,17 @@ export function Today() {
         </button>
       )}
 
+      {nudge && (
+        <div className="nudge">
+          <Bell size={20} />
+          <button type="button" className="nudge-body" onClick={() => setSharing('create')}>
+            <b>Get notifications</b>
+            <small>A morning list of jobs, and a ping when someone waters.</small>
+          </button>
+          <button type="button" className="nudge-x" aria-label="Not now" onClick={() => { localStorage.setItem('sprout.pushNudge', '1'); setNudge(false); }}><X size={18} /></button>
+        </div>
+      )}
+
       {alerts.map((a) => (
         <div key={a.kind} className={`alert alert-${a.kind}`}>
           {a.kind === 'frost' ? <Snowflake size={20} /> : <Flame size={20} />}
@@ -161,7 +184,7 @@ export function Today() {
           <h2>Start with one plant</h2>
           <p>Add the basil on the windowsill or the lemon tree out the back. Plant Parenthood will tell you when it needs water, a trim or a bigger pot.</p>
           <a className="btn btn-primary" href="#/add">Add your first plant</a>
-          {syncAvailable && !house && <button type="button" className="link" onClick={() => setSharing(true)}>Joining someone's household? Enter their code</button>}
+          {syncAvailable && !house && <button type="button" className="link" onClick={() => setSharing('join')}>Joining someone's household? Enter their code</button>}
         </section>
       ) : (
         <>
@@ -197,7 +220,7 @@ export function Today() {
       )}
 
       {sheet && <LocationSheet onClose={() => setSheet(false)} />}
-      {sharing && <HouseholdSheet onClose={() => setSharing(false)} />}
+      {sharing && <HouseholdSheet initial={sharing} onClose={() => setSharing(false)} />}
     </main>
   );
 }

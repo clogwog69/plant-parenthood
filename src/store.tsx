@@ -1,10 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { Diagnosis } from './lib/ai';
+import { digest, plantName } from './lib/care';
 import { adviceFor, applyAdvice } from './lib/checkin';
 import * as db from './lib/db';
 import type { Shot } from './lib/photo';
+import { notifyHouse } from './lib/push';
 import * as remote from './lib/sync';
 import type { House } from './lib/sync';
-import type { Checkin, EventType, Location, Photo, Place, Plant, Sign, Weather } from './lib/types';
+import type { Advice, AdviceKind, Checkin, EventType, Location, Photo, Place, Plant, Sign, TagInfo, Weather } from './lib/types';
 import { getWeather } from './lib/weather';
 
 export type View = 'grid' | 'list';
@@ -18,6 +21,7 @@ export interface NewPlant {
   potted: boolean;
   lastWatered?: number;
   shot?: Shot;
+  tag?: TagInfo;
 }
 
 interface Store {
@@ -39,6 +43,11 @@ interface Store {
   log(id: string, type: Exclude<EventType, 'added'>): void;
   completeTodo(id: string, todoId: string): void;
   checkIn(id: string, signs: Sign[], note: string, shot?: Shot): Checkin | null;
+  /** A quick progress photo, no questions asked. */
+  addPhoto(id: string, shot: Shot): void;
+  setTag(id: string, tag: TagInfo | undefined): void;
+  /** Fold what the photo diagnosis found into a check-in. */
+  diagnose(id: string, checkinId: string, dx: Diagnosis): void;
   createHouse(name: string, me: string): Promise<void>;
   /** Rejects with a readable message when the code is wrong. */
   joinHouse(code: string, me: string): Promise<void>;
@@ -64,13 +73,18 @@ function write(key: string, v: unknown) {
 }
 
 type Dirty = Record<string, 'put' | 'del'>;
-const K = { house: 'sprout.house', me: 'sprout.me', since: 'sprout.since', dirty: 'sprout.dirty', photos: 'sprout.dirtyPhotos', loc: 'sprout.locDirty' };
+const K = { house: 'sprout.house', me: 'sprout.me', since: 'sprout.since', dirty: 'sprout.dirty', photos: 'sprout.dirtyPhotos', loc: 'sprout.locDirty', digest: 'sprout.digest' };
 
-const STAMP: Record<Exclude<EventType, 'added'>, 'lastWatered' | 'lastRepotted' | 'lastHarvested'> = {
+const STAMP: Record<Exclude<EventType, 'added'>, 'lastWatered' | 'lastRepotted' | 'lastHarvested' | 'lastFed'> = {
+  fed: 'lastFed',
   watered: 'lastWatered',
   repotted: 'lastRepotted',
   harvested: 'lastHarvested',
 };
+
+const DID: Record<Exclude<EventType, 'added'>, string> = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', fed: 'fed' };
+const DX_KIND: Record<string, AdviceKind> = { water: 'water', hold: 'hold', repot: 'repot', feed: 'care', prune: 'prune', harvest: 'harvest', care: 'care', good: 'good' };
+const text = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 const byAge = (a: Plant, b: Plant) => a.createdAt - b.createdAt;
 
@@ -88,6 +102,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const houseRef = useRef(house);
   const meRef = useRef(me);
   const locRef = useRef(location);
+  const weatherRef = useRef<Weather | null>(null);
   const busy = useRef(false);
   const again = useRef(false);
   const timer = useRef<number | undefined>(undefined);
@@ -168,6 +183,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         write(K.dirty, after);
       }
 
+      // The week ahead, in words, for the morning notification.
+      const week = JSON.stringify(digest(ref.current, weatherRef.current, locRef.current));
+      if (week !== read<string>(K.digest, '')) {
+        remote.setDigest(h.code, JSON.parse(week)).then((ok) => { if (ok) write(K.digest, week); }).catch(() => {});
+      }
+
       write(K.since, got.now);
       setSyncState('idle');
     } catch {
@@ -212,6 +233,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => { window.clearInterval(every); document.removeEventListener('visibilitychange', tick); window.removeEventListener('online', tick); };
   }, [house, sync]);
 
+  useEffect(() => { weatherRef.current = weather; }, [weather]);
+
   useEffect(() => {
     if (!location) { setWeather(null); return; }
     let off = false;
@@ -245,6 +268,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     write(K.photos, photos);
     write(K.since, null);
     write(K.loc, false);
+    write(K.digest, '');
     write(K.house, h);
     write(K.me, name);
     houseRef.current = h;
@@ -257,6 +281,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const store = useMemo<Store>(() => {
     const who = () => (houseRef.current && meRef.current ? meRef.current : undefined);
+    /** Let the rest of the household know, if they have notifications on. */
+    const tell = (did: string, p: Plant | undefined | null) => {
+      const h = houseRef.current;
+      if (h && meRef.current && p) notifyHouse(h.code, `${meRef.current} ${did} ${plantName(p)}`, h.name);
+    };
     return {
       ready, plants, location, weather, weatherFailed, view, house, me, syncState,
       setView(v) { setV(v); write('sprout.view', v); },
@@ -272,13 +301,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const plant: Plant = {
           id, guideKey: n.guideKey, species: n.species, nickname: n.nickname || undefined,
           place: n.place, potted: n.potted, createdAt: now, updatedAt: now,
-          thumb: n.shot?.thumb, photoId, lastWatered: n.lastWatered,
+          thumb: n.shot?.thumb, photoId, lastWatered: n.lastWatered, tag: n.tag,
+          firstPhoto: n.shot && photoId ? { photoId, thumb: n.shot.thumb, date: now } : undefined,
           todos: [], checkins: [], events: [{ type: 'added', date: now, by: who() }],
         };
         if (n.shot && photoId) savePhoto({ id: photoId, plantId: id, date: now, dataUrl: n.shot.full });
         commit([...ref.current, plant]);
         void db.putPlant(plant);
         markDirty(id, 'put');
+        tell('added', plant);
         return plant;
       },
 
@@ -291,13 +322,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       log(id, type) {
         const now = Date.now();
-        patch(id, (p) => ({
+        tell(DID[type], patch(id, (p) => ({
           ...p,
           [STAMP[type]]: now,
           holdWaterUntil: type === 'watered' ? undefined : p.holdWaterUntil,
           todos: p.todos.filter((t) => !(type === 'watered' && t.kind === 'water') && !(type === 'repotted' && t.kind === 'repot') && !(type === 'harvested' && t.kind === 'harvest')),
           events: [{ type, date: now, by: who() }, ...p.events],
-        }));
+        })));
       },
 
       completeTodo(id, todoId) {
@@ -315,7 +346,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       checkIn(id, signs, note, shot) {
         const now = Date.now();
         let made: Checkin | null = null;
-        patch(id, (p) => {
+        tell('checked on', patch(id, (p) => {
           const advice = adviceFor(p, signs, now);
           const photoId = shot ? uid() : undefined;
           if (shot && photoId) savePhoto({ id: photoId, plantId: id, date: now, dataUrl: shot.full });
@@ -327,8 +358,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             thumb: shot?.thumb ?? p.thumb,
             photoId: photoId ?? p.photoId,
           };
-        });
+        }));
         return made;
+      },
+
+      addPhoto(id, shot) {
+        const now = Date.now();
+        const photoId = uid();
+        savePhoto({ id: photoId, plantId: id, date: now, dataUrl: shot.full });
+        tell('added a photo of', patch(id, (p) => ({
+          ...p,
+          checkins: [{ id: uid(), date: now, kind: 'photo', photoId, thumb: shot.thumb, signs: [], advice: [], by: who() }, ...p.checkins],
+          thumb: shot.thumb,
+          photoId,
+        })));
+      },
+
+      setTag(id, tag) {
+        patch(id, (p) => ({ ...p, tag }));
+      },
+
+      diagnose(id, checkinId, dx) {
+        const found: Advice[] = (Array.isArray(dx.findings) ? dx.findings : []).slice(0, 5).flatMap((f): Advice[] => {
+          const title = text(f?.title, 60);
+          const detail = text(f?.detail, 500);
+          return title && detail ? [{ sign: 'ai', kind: DX_KIND[f.action] ?? 'care', title, detail }] : [];
+        });
+        const health = dx.health === 'poor' || dx.health === 'watch' ? dx.health : 'good';
+        patch(id, (p) => ({
+          ...applyAdvice(p, found, uid),
+          checkins: p.checkins.map((c) => (c.id !== checkinId ? c : {
+            ...c,
+            summary: text(dx.summary, 300) || undefined,
+            health,
+            advice: [...c.advice.filter((a) => !(a.sign === 'looks_great' && found.length)), ...found],
+          })),
+        }));
       },
 
       async createHouse(name, myName) {
@@ -346,7 +411,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       leaveHouse() {
         houseRef.current = null;
-        for (const k of [K.house, K.since, K.dirty, K.photos, K.loc]) { try { localStorage.removeItem(k); } catch { /* private mode */ } }
+        for (const k of [K.house, K.since, K.dirty, K.photos, K.loc, K.digest]) { try { localStorage.removeItem(k); } catch { /* private mode */ } }
         setHouse(null);
         setSyncState('off');
       },

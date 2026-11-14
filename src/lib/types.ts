@@ -54,7 +54,8 @@ export interface Guide {
 export type AdviceKind = 'water' | 'hold' | 'repot' | 'harvest' | 'prune' | 'care' | 'good';
 
 export interface Advice {
-  sign: Sign;
+  /** 'ai' when it came from a photo diagnosis rather than a ticked box. */
+  sign: Sign | 'ai';
   kind: AdviceKind;
   title: string;
   detail: string;
@@ -78,9 +79,31 @@ export interface Checkin {
   note?: string;
   /** Who did it, when the plant is shared with a household. */
   by?: string;
+  /** 'photo' is a quick progress photo with no questions asked. */
+  kind?: 'photo';
+  /** One-line verdict from a photo diagnosis. */
+  summary?: string;
+  health?: 'good' | 'watch' | 'poor';
 }
 
-export type EventType = 'watered' | 'repotted' | 'harvested' | 'added';
+/** What the little tag that came with the plant says. */
+export interface TagInfo {
+  name?: string;
+  light?: string;
+  water?: string;
+  size?: string;
+  feeding?: string;
+  notes?: string;
+  date: number;
+}
+
+export interface FirstPhoto {
+  photoId: string;
+  thumb: string;
+  date: number;
+}
+
+export type EventType = 'watered' | 'repotted' | 'harvested' | 'fed' | 'added';
 
 export interface PlantEvent {
   type: EventType;
@@ -104,6 +127,10 @@ export interface Plant {
   lastWatered?: number;
   lastRepotted?: number;
   lastHarvested?: number;
+  lastFed?: number;
+  /** The photo taken when the plant was added, kept for the progress strip. */
+  firstPhoto?: FirstPhoto;
+  tag?: TagInfo;
   /** Don't ask for water before this time (set when the soil was reported soggy). */
   holdWaterUntil?: number;
   todos: Todo[];
@@ -141,7 +168,7 @@ export interface Weather {
   days: DayWeather[]; // includes a few past days
 }
 
-export type TaskKind = 'water' | 'repot' | 'harvest' | 'photo' | 'todo';
+export type TaskKind = 'water' | 'feed' | 'repot' | 'harvest' | 'photo' | 'todo';
 
 export interface Task {
   id: string;

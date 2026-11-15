@@ -46,6 +46,8 @@ interface Store {
   /** A quick progress photo, no questions asked. */
   addPhoto(id: string, shot: Shot): void;
   setTag(id: string, tag: TagInfo | undefined): void;
+  /** Change what it is, where it lives or its nickname. */
+  editPlant(id: string, changes: Partial<Pick<Plant, 'guideKey' | 'species' | 'nickname' | 'place' | 'potted'>>): void;
   /** Fold what the photo diagnosis found into a check-in. */
   diagnose(id: string, checkinId: string, dx: Diagnosis): void;
   createHouse(name: string, me: string): Promise<void>;
@@ -376,6 +378,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       setTag(id, tag) {
         patch(id, (p) => ({ ...p, tag }));
+      },
+
+      editPlant(id, changes) {
+        patch(id, (p) => ({ ...p, ...changes, nickname: (changes.nickname ?? p.nickname)?.trim() || undefined }));
       },
 
       diagnose(id, checkinId, dx) {

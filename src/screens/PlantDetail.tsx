@@ -1,4 +1,4 @@
-import { Camera, Check, ChevronLeft, ChevronRight, Droplet, MapPin, MessageCircleQuestion, Plus, ScanText, Scissors, Shovel, Sprout, Sun, Trash2, X } from 'lucide-react';
+import { Camera, Check, ChevronLeft, ChevronRight, Droplet, MapPin, MessageCircleQuestion, Pencil, Plus, ScanText, Scissors, Shovel, Sprout, Sun, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { back, go } from '../App';
 import { aiMessage, runAI, type Answer, type TagRead } from '../lib/ai';
@@ -8,6 +8,7 @@ import { CATEGORY_LABEL, guideFor } from '../lib/guide';
 import type { EventType, Plant, TagInfo } from '../lib/types';
 import { useStore, usePhoto } from '../store';
 import { Avatar, PhotoButton } from '../ui/bits';
+import { EditPlantSheet } from './EditPlant';
 import { TaskIcon, taskTone, useTaskDone } from './Today';
 
 const EVENT: Record<EventType, string> = { watered: 'Watered', repotted: 'Repotted', harvested: 'Harvested', fed: 'Fed', added: 'Added to Plant Parenthood' };
@@ -63,6 +64,7 @@ export function PlantDetail({ id }: { id: string }) {
   const done = useTaskDone();
   const [viewing, setViewing] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [tagNote, setTagNote] = useState('');
   const [question, setQuestion] = useState('');
   const [asking, setAsking] = useState(false);
@@ -131,6 +133,7 @@ export function PlantDetail({ id }: { id: string }) {
       <div className={`hero cat-${g.category}`}>
         {photo || plant.thumb ? <img src={photo ?? plant.thumb} alt={plantName(plant)} /> : <span className="avatar-letter">{plant.species.charAt(0).toUpperCase()}</span>}
         <button type="button" className="icon-btn floating" onClick={() => back('/plants')} aria-label="Back"><ChevronLeft size={22} /></button>
+        <button type="button" className="icon-btn floating floating-right" onClick={() => setEditing(true)} aria-label="Edit plant"><Pencil size={19} /></button>
       </div>
 
       <header className="detail-head">
@@ -141,7 +144,9 @@ export function PlantDetail({ id }: { id: string }) {
           <span>{plant.potted ? 'In a pot' : 'In the ground'}</span>
           <span>{CATEGORY_LABEL[g.category]}</span>
         </p>
+        <button type="button" className="link" onClick={() => setEditing(true)}>Moved it? Change where it lives</button>
       </header>
+      {editing && <EditPlantSheet plant={plant} onClose={() => setEditing(false)} />}
 
       <section className={'next' + (water.dueIn <= 0 && !water.skipped ? ' due' : '')}>
         <div className="next-top">

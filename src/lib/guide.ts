@@ -5,6 +5,7 @@ import { FRUIT } from './guides/fruit';
 import { INDOOR } from './guides/indoor';
 import { FLOWERS } from './guides/flowers';
 import { SHRUBS } from './guides/shrubs';
+import { KINDS } from './guides/kinds';
 
 const warm: Season[] = ['summer', 'autumn'];
 
@@ -117,7 +118,7 @@ const BASE: Guide[] = [
 
   // ───────── Vegetables
   {
-    key: 'tomato', name: 'Tomato', aka: ['Cherry tomato', 'Tomatoes'], latin: 'Solanum lycopersicum', category: 'vegetable',
+    key: 'tomato', name: 'Tomato', aka: ['Tomatoes'], latin: 'Solanum lycopersicum', category: 'vegetable',
     waterDays: 2, water: 'Deep, even watering at the base. Irregular watering splits the fruit.',
     light: 'Full sun, 6 to 8 hours.',
     repotMonths: 6, frostTender: true,
@@ -507,7 +508,7 @@ const BASE: Guide[] = [
   },
 ];
 
-export const GUIDES: Guide[] = [...BASE, ...MORE_GUIDES, ...VEG_HERBS, ...FRUIT, ...INDOOR, ...FLOWERS, ...SHRUBS];
+export const GUIDES: Guide[] = [...BASE, ...MORE_GUIDES, ...VEG_HERBS, ...FRUIT, ...INDOOR, ...FLOWERS, ...SHRUBS, ...KINDS];
 
 const byKey = new Map(GUIDES.map((g) => [g.key, g]));
 

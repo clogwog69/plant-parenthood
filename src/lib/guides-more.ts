@@ -304,7 +304,7 @@ export const MORE_GUIDES: Guide[] = [
 
   // ───────── Vegetables
   {
-    key: 'broccoli', name: 'Broccoli', aka: ['Broccolini'], latin: 'Brassica oleracea (Italica group)', category: 'vegetable',
+    key: 'broccoli', name: 'Broccoli', latin: 'Brassica oleracea (Italica group)', category: 'vegetable',
     waterDays: 3, water: 'Regular deep watering at the base.',
     light: 'Full sun.',
     repotMonths: 6,
@@ -605,7 +605,7 @@ export const MORE_GUIDES: Guide[] = [
   },
 
   {
-    key: 'peas', name: 'Peas', aka: ['Snow peas', 'Sugar snap peas', 'Garden peas'], latin: 'Pisum sativum', category: 'vegetable',
+    key: 'peas', name: 'Peas', aka: ['Pea'], latin: 'Pisum sativum', category: 'vegetable',
     waterDays: 3, water: 'Keep evenly moist, especially once flowers appear. Avoid wetting the leaves.',
     light: 'Full sun.',
     repotMonths: 6,
@@ -683,7 +683,7 @@ export const MORE_GUIDES: Guide[] = [
     tips: ['Each seed is a cluster, so thin seedlings to 8 cm apart.', 'Young leaves are good in salads.'],
   },
   {
-    key: 'radish', name: 'Radish', aka: ['Radishes', 'Daikon'], latin: 'Raphanus sativus', category: 'vegetable',
+    key: 'radish', name: 'Radish', aka: ['Radishes'], latin: 'Raphanus sativus', category: 'vegetable',
     waterDays: 2, water: 'Keep moist. Dry soil makes them hot and woody.',
     light: 'Sun to part shade.',
     repotMonths: 2,
@@ -729,7 +729,7 @@ export const MORE_GUIDES: Guide[] = [
     signs: { pests: 'Squiggly silver trails are citrus leafminer; spray new growth with horticultural oil. Lumps on stems are scale; same oil works.' },
   },
   {
-    key: 'pear', name: 'Pear tree', aka: ['Pear', 'Nashi'], latin: 'Pyrus', category: 'fruit',
+    key: 'pear', name: 'Pear tree', aka: ['Pear'], latin: 'Pyrus', category: 'fruit',
     waterDays: 5, water: 'Deep watering while fruit swells.',
     light: 'Full sun.',
     repotMonths: 36,
@@ -901,7 +901,7 @@ export const MORE_GUIDES: Guide[] = [
     signs: { flowering: fruitSet, spots: mildew },
   },
   {
-    key: 'rockmelon', name: 'Rockmelon', aka: ['Cantaloupe', 'Honeydew', 'Melon'], latin: 'Cucumis melo', category: 'fruit',
+    key: 'rockmelon', name: 'Rockmelon', aka: ['Cantaloupe', 'Melon'], latin: 'Cucumis melo', category: 'fruit',
     waterDays: 2, water: 'Deep watering. Ease off as fruit ripens.',
     light: 'Full sun.',
     repotMonths: 6, frostTender: true,
@@ -1032,7 +1032,7 @@ export const MORE_GUIDES: Guide[] = [
     signs: { yellow: 'Yellow leaves with green veins mean it is hungry. Feed with citrus fertiliser and water it in well.' },
   },
   {
-    key: 'orange', name: 'Orange tree', aka: ['Orange', 'Navel orange', 'Valencia orange', 'Blood orange'], latin: 'Citrus × sinensis', category: 'fruit',
+    key: 'orange', name: 'Orange tree', aka: ['Orange', 'Blood orange'], latin: 'Citrus × sinensis', category: 'fruit',
     waterDays: 5, water: 'Deep soak, then let the top few centimetres dry. Even watering stops fruit splitting.',
     light: 'Full sun.',
     repotMonths: 30, frostTender: true,
@@ -1772,7 +1772,7 @@ export const MORE_GUIDES: Guide[] = [
     tips: ['Plant bulbs in autumn for scented spring flowers.', 'Let the leaves die back naturally.'],
   },
   {
-    key: 'iris', name: 'Iris', aka: ['Bearded iris', 'Dutch iris'], latin: 'Iris', category: 'flower',
+    key: 'iris', name: 'Iris', aka: ['Irises'], latin: 'Iris', category: 'flower',
     waterDays: 6, water: 'Water in dry spells while growing.',
     light: 'Full sun.',
     repotMonths: 36,
@@ -2520,7 +2520,7 @@ export const MORE_GUIDES: Guide[] = [
     signs: { yellow: 'Yellow leaves with green veins usually mean the soil is not acidic enough, or it lacks magnesium. Feed with azalea food and a teaspoon of Epsom salts in water.' },
   },
   {
-    key: 'azalea', name: 'Azalea', aka: ['Rhododendron'], latin: 'Rhododendron', category: 'shrub',
+    key: 'azalea', name: 'Azalea', aka: ['Azaleas'], latin: 'Rhododendron', category: 'shrub',
     waterDays: 3, water: 'Shallow roots. Keep moist and never let it dry out, especially in pots.',
     light: 'Morning sun, afternoon shade.',
     repotMonths: 30,

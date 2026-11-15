@@ -545,6 +545,42 @@ export interface Match {
   label: string;
 }
 
+/** "Bird's-eye Chilli" and "birdseye chilli" read the same. */
+const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/['’`]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+let byName: Map<string, Match> | null = null;
+
+/**
+ * Finds the plant a photo or tag named, only when the name really is that plant.
+ * "Chilli (Thai Birdseye)" also tries "Thai Birdseye Chilli" and "Birdseye Chilli",
+ * so a named variety wins over the general plant.
+ */
+export function findByName(found: string): Match | undefined {
+  if (!byName) {
+    byName = new Map();
+    for (const guide of GUIDES) for (const n of [guide.name, ...(guide.aka ?? [])]) {
+      const k = plain(n);
+      if (!byName.has(k)) byName.set(k, { guide, label: n });
+    }
+  }
+  const tries: string[] = [];
+  const m = /^(.*?)\s*\(([^)]+)\)\s*$/.exec(found);
+  if (m) {
+    const words = `${m[2]} ${m[1]}`.split(/\s+/);
+    for (let i = 0; i < words.length - 1; i++) tries.push(words.slice(i).join(' '));
+    tries.push(m[2], m[1]);
+  } else tries.push(found);
+  for (const t of tries) { const hit = byName.get(plain(t)); if (hit) return hit; }
+  return undefined;
+}
+
+/** The plant with exactly this botanical name, when only one plant has it. */
+export function findByLatin(latin: string): Guide | undefined {
+  const l = plain(latin);
+  if (l.split(' ').length < 2) return undefined; // a genus alone is too vague
+  const all = GUIDES.filter((g) => plain(g.latin) === l || (g.aka ?? []).some((a) => plain(a) === l));
+  return all.length === 1 ? all[0] : undefined;
+}
+
 export function searchGuides(query: string): Match[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];

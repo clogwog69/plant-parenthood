@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { back, go } from '../App';
 import { aiMessage, runAI, type Identified, type TagRead } from '../lib/ai';
 import { DAY, placement } from '../lib/care';
-import { CATEGORY_LABEL, GUIDES, searchGuides, type Match } from '../lib/guide';
+import { CATEGORY_LABEL, GUIDES, findByLatin, findByName, searchGuides, type Match } from '../lib/guide';
 import type { Shot } from '../lib/photo';
 import type { Category, Place, TagInfo } from '../lib/types';
 import { useStore } from '../store';
@@ -33,12 +33,13 @@ export function AddPlant() {
   const ready = !!picked || (isCustom && !!custom);
 
   /** Fill in the "What is it?" box from a name the photo or tag gave us. */
-  const suggest = (found: string, category?: Category, careLike?: string) => {
-    const exact = searchGuides(found).find((m) => m.label.toLowerCase() === found.toLowerCase());
-    const like = careLike ? GUIDES.find((g) => g.key === careLike) : undefined;
-    if (!exact && like) { setPicked({ guide: like, label: found }); setQuery(''); return; }
-    const hit = exact ?? searchGuides(found)[0] ?? searchGuides(found.split(/\s+/).slice(-1)[0])[0];
-    if (hit) { setPicked({ guide: hit.guide, label: hit.label }); setQuery(''); return; }
+  // Only fills in a plant when we are sure it is that plant. A loose guess
+  // ("Umbrella tree" -> "tree" -> Lemon tree) is worse than letting them pick.
+  const suggest = (found: string, category?: Category, careLike?: string, latin?: string) => {
+    const exact = findByName(found);
+    if (exact) { setPicked(exact); setQuery(''); return; }
+    const like = (careLike ? GUIDES.find((g) => g.key === careLike) : undefined) ?? (latin ? findByLatin(latin) : undefined);
+    if (like) { setPicked({ guide: like, label: found }); setQuery(''); return; }
     setPicked(null);
     setQuery(found);
     if (category && CATEGORIES.includes(category)) setCustom(category);
@@ -52,7 +53,7 @@ export function AddPlant() {
       const found = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';
       if (!found) setAiNote('Could not tell what that is. Try a clearer photo, or type the name.');
       else {
-        suggest(found, r.category, typeof r.careLike === 'string' ? r.careLike : undefined);
+        suggest(found, r.category, typeof r.careLike === 'string' ? r.careLike : undefined, typeof r.latin === 'string' ? r.latin : undefined);
         setAiNote(`That looks like ${found}${r.latin ? ` (${r.latin})` : ''}${r.confidence === 'low' ? ', but it is hard to be sure' : ''}. Change it below if that is wrong.`);
       }
     } catch (e) { setAiNote(aiMessage(e)); }

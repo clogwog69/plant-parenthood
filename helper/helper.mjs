@@ -86,7 +86,7 @@ function knownPlants() {
 
 const TASK = {
   identify: () => `Identify the plant in the photo. It is most likely a plant grown in a home, garden or veggie patch, often in Australia.
-Reply as {"name": common name a garden centre would use (Australian name if there is one), "latin": botanical name, "category": one of "herb","vegetable","fruit","houseplant","succulent","flower","shrub" (use "shrub" for trees, climbers, grasses and anything else), "careLike": the key of the plant below whose care is closest (the same plant if it is listed, otherwise the nearest relative or a plant needing the same care; empty string if nothing is close), "confidence": "high"|"medium"|"low"}.
+Reply as {"name": common name a garden centre would use (Australian name if there is one). Be as specific as you can tell from the photo or any label in it: the variety or type, not just the general plant (e.g. "Bird's eye chilli" rather than "Chilli", "Weeping fig" rather than "Fig"). No brackets, "latin": botanical name, "category": one of "herb","vegetable","fruit","houseplant","succulent","flower","shrub" (use "shrub" for trees, climbers, grasses and anything else), "careLike": the key of the plant below whose care is closest (the same plant if it is listed; a listed variety beats the general plant; never a different plant just because the names share a word like "fig" or "tree"; otherwise the nearest relative or a plant needing the same care; empty string if nothing is close), "confidence": "high"|"medium"|"low"}.
 If you cannot tell, use an empty string for name.
 Plants the app knows (key=name): ${knownPlants().join(', ')}`,
 

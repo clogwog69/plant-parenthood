@@ -11,9 +11,9 @@ import { useStore } from '../store';
 import { PhotoPicker } from '../ui/bits';
 
 const GROUPS = ['Soil', 'Leaves', 'Growth', 'Pot'] as const;
-const HEALTH = { good: 'Looking good', watch: 'Keep an eye on it', poor: 'Needs help' };
+export const HEALTH = { good: 'Looking good', watch: 'Keep an eye on it', poor: 'Needs help' };
 
-function AdviceIcon({ kind }: { kind: Advice['kind'] }) {
+export function AdviceIcon({ kind }: { kind: Advice['kind'] }) {
   if (kind === 'water') return <Droplet size={18} />;
   if (kind === 'hold') return <Timer size={18} />;
   if (kind === 'repot') return <Shovel size={18} />;

@@ -1,6 +1,7 @@
-import { ChevronRight, Droplet, LayoutGrid, List, Users } from 'lucide-react';
-import { useState } from 'react';
-import { dueLabel, plantName, waterPlan } from '../lib/care';
+import { ArrowDownUp, Carrot, Droplet, FlaskConical, MoveRight, Scissors, Shovel, Sprout, ChevronRight, LayoutGrid, List, ScanSearch, Users } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { plantName } from '../lib/care';
+import { dueFor, saveSort, savedSort, SORTS, sortPlants, type SortKey } from '../lib/sort';
 import type { Plant } from '../lib/types';
 import { useStore } from '../store';
 import { syncAvailable } from '../lib/sync';
@@ -8,18 +9,29 @@ import { Avatar, HouseholdSheet, Segmented } from '../ui/bits';
 
 type Filter = 'all' | 'garden' | 'indoor';
 
+const SORT_ICON: Record<SortKey, typeof Droplet> = {
+  az: Droplet, water: Droplet, age: Sprout, prune: Scissors, repot: Shovel, feed: FlaskConical,
+  harvest: Carrot, propagate: Sprout, move: MoveRight,
+};
+
 export function Plants() {
   const { plants, view, setView, weather, location, house, syncState } = useStore();
   const [sharing, setSharing] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
-  const shown = plants.filter((p) => filter === 'all' || p.place === filter);
+  const [sort, setSortKey] = useState<SortKey>(savedSort);
+  const setSort = (k: SortKey) => { setSortKey(k); saveSort(k); };
+  const shown = useMemo(
+    () => sortPlants(plants.filter((p) => filter === 'all' || p.place === filter), sort, weather, location),
+    [plants, filter, sort, weather, location],
+  );
 
+  // The chip shows the job you sorted by. A–Z shows watering, the job that matters most.
   const water = (p: Plant) => {
-    const w = waterPlan(p, weather, location);
-    const late = w.dueIn <= 0 && !w.skipped;
+    const d = dueFor(sort === 'az' ? 'water' : sort, p, weather, location)!;
+    const Icon = SORT_ICON[sort];
     return (
-      <span className={'chip chip-water' + (late ? ' due' : '')}>
-        <Droplet size={12} /> {w.skipped ? 'Rain coming' : w.dueIn <= 0 ? 'Today' : dueLabel(w.dueIn)}
+      <span className={'chip chip-water' + (d.urgent ? ' due' : '') + (d.never ? ' never' : '')}>
+        <Icon size={12} /> {d.label}
       </span>
     );
   };
@@ -31,9 +43,12 @@ export function Plants() {
           <p className="eyebrow">{plants.length === 1 ? '1 plant' : `${plants.length} plants`}</p>
           <h1>My plants</h1>
         </div>
+        <div className="top-actions">
+        <a href="#/doctor" className="icon-btn doctor-btn" aria-label="Plant doctor"><ScanSearch size={19} /></a>
         <div className="view-toggle" role="group" aria-label="How to show plants">
           <button type="button" className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Photos"><LayoutGrid size={18} /></button>
           <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Names only"><List size={18} /></button>
+        </div>
         </div>
       </header>
 
@@ -53,6 +68,17 @@ export function Plants() {
         value={filter} onChange={setFilter}
         options={[{ value: 'all', label: 'All' }, { value: 'garden', label: 'Garden' }, { value: 'indoor', label: 'Indoors' }]}
       />
+
+      {plants.length > 1 && (
+        <div className="sort-row" role="group" aria-label="Sort by">
+          <span className="sort-label"><ArrowDownUp size={14} /> Sort</span>
+          {SORTS.map((s) => (
+            <button key={s.value} type="button" className={'sort-chip' + (sort === s.value ? ' on' : '')} aria-pressed={sort === s.value} onClick={() => setSort(s.value)}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {shown.length === 0 ? (
         <section className="empty small">

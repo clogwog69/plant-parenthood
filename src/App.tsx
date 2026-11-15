@@ -2,6 +2,7 @@ import { Leaf, Plus, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AddPlant } from './screens/AddPlant';
 import { CheckinScreen } from './screens/Checkin';
+import { Doctor } from './screens/Doctor';
 import { PlantDetail } from './screens/PlantDetail';
 import { Plants } from './screens/Plants';
 import { Today } from './screens/Today';
@@ -34,6 +35,7 @@ export function App() {
   if (plant?.[2]) { screen = <CheckinScreen id={plant[1]} />; tabs = false; }
   else if (plant) screen = <PlantDetail id={plant[1]} />;
   else if (route === '/add') { screen = <AddPlant />; tabs = false; }
+  else if (route === '/doctor') { screen = <Doctor />; tabs = false; }
   else if (route === '/plants') screen = <Plants />;
   else screen = <Today />;
 

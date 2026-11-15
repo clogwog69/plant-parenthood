@@ -347,3 +347,26 @@ h1 { font: 600 32px/1.1 var(--serif); letter-spacing: -0.02em; }
 .steps svg { vertical-align: -2px; color: var(--green); }
 .link-text { font-size: 16px !important; letter-spacing: 0 !important; word-break: break-all; }
 .floating-right { left: auto; right: 16px; }
+
+/* Sorting the plant list */
+.sort-row { display: flex; gap: 6px; overflow-x: auto; margin: -4px -16px 0; padding: 2px 16px; scrollbar-width: none; align-items: center; }
+.sort-row::-webkit-scrollbar { display: none; }
+.sort-label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); flex: none; padding-right: 2px; }
+.sort-chip { flex: none; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); font-size: 14px; font-weight: 500; }
+.sort-chip.on { background: var(--green); border-color: var(--green); color: #fff; }
+.chip-water.never { background: var(--line); color: var(--muted); }
+
+/* Plant doctor */
+.doctor-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
+.doctor-card > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.doctor-card small { color: var(--muted); font-size: 13px; }
+.doctor-card > svg { color: var(--muted); flex: none; }
+.doctor-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--green-soft); color: var(--green); flex: none; }
+.who-list { display: flex; gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
+.who-list::-webkit-scrollbar { display: none; }
+.who { flex: none; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.who .avatar, .who-none { width: 56px; height: 56px; border-radius: 16px; outline: 2px solid transparent; outline-offset: 2px; }
+.who-none { display: grid; place-items: center; background: var(--card); border: 1px solid var(--line); color: var(--muted); }
+.who.on .avatar, .who.on .who-none { outline-color: var(--green); }
+.who small { font-size: 12px; width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who.on small { color: var(--green); font-weight: 600; }

@@ -1,4 +1,4 @@
-import { Bell, Camera, Check, CloudRain, Droplet, Flame, MapPin, Scissors, Settings, Shovel, Snowflake, Sparkles, Sprout, X } from 'lucide-react';
+import { Bell, Camera, Check, ChevronRight, CloudRain, Droplet, Flame, MapPin, ScanSearch, Scissors, Settings, Shovel, Snowflake, Sparkles, Sprout, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { go } from '../App';
 import { DAY, alertsFor, allTasks, dueLabel, plantName, seasonFor, startOfDay } from '../lib/care';
@@ -162,6 +162,14 @@ export function Today() {
             </small>
           </span>
         </button>
+      )}
+
+      {plants.length > 0 && (
+        <a href="#/doctor" className="doctor-card">
+          <span className="doctor-ico"><ScanSearch size={22} /></span>
+          <span><b>Plant doctor</b><small>Something look wrong? Take a photo and find out why.</small></span>
+          <ChevronRight size={18} />
+        </a>
       )}
 
       <InstallNudge />

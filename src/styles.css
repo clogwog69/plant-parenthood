@@ -342,3 +342,7 @@ h1 { font: 600 32px/1.1 var(--serif); letter-spacing: -0.02em; }
 .choices input[role='switch']:checked { background: var(--green); }
 .choices input[role='switch']:checked::after { transform: translateX(18px); }
 .choices input[role='switch']:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.steps { margin: 0; padding-left: 22px; list-style: decimal; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.4; }
+.steps li::marker { color: var(--green); font-weight: 700; }
+.steps svg { vertical-align: -2px; color: var(--green); }
+.link-text { font-size: 16px !important; letter-spacing: 0 !important; word-break: break-all; }

@@ -7,7 +7,7 @@ import { syncAvailable } from '../lib/sync';
 import type { Plant, Task } from '../lib/types';
 import { describe } from '../lib/weather';
 import { useStore } from '../store';
-import { Avatar, HouseholdSheet, LocationSheet, SettingsSheet, SkyIcon } from '../ui/bits';
+import { Avatar, HouseholdSheet, InstallNudge, LocationSheet, SettingsSheet, SkyIcon } from '../ui/bits';
 
 const DID = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', fed: 'fed', added: 'added' };
 
@@ -85,7 +85,7 @@ export function Today() {
   const [settings, setSettings] = useState(false);
   useEffect(() => {
     if (!house || localStorage.getItem('sprout.pushNudge')) { setNudge(false); return; }
-    if (needsHomeScreen()) { setNudge(true); return; }
+    if (needsHomeScreen()) { setNudge(false); return; } // the Home Screen reminder covers this
     if (!pushSupported()) return;
     let off = false;
     void pushIsOn().then((on) => { if (!off) setNudge(!on); });
@@ -163,6 +163,8 @@ export function Today() {
           </span>
         </button>
       )}
+
+      <InstallNudge />
 
       {nudge && (
         <div className="nudge">

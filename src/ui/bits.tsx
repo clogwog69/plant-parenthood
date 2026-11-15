@@ -1,9 +1,10 @@
-import { Bell, BellOff, Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, RefreshCw, Search, Share2, Sun, X } from 'lucide-react';
+import { Bell, BellOff, Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, RefreshCw, Search, Share, Share2, Smartphone, Sun, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { guideFor } from '../lib/guide';
 import { shoot, type Shot } from '../lib/photo';
 import { PUSH_CHOICES, disablePush, enablePush, getPrefs, needsHomeScreen, pushBlocked, pushIsOn, pushSupported, setPrefs, type PushPrefs } from '../lib/push';
+import { canPrompt, device, installLater, onInstallChange, promptInstall, remindInstall } from '../lib/install';
 import { cleanCode, prettyCode } from '../lib/sync';
 import type { Location, Plant } from '../lib/types';
 import { currentPosition, searchPlaces, type Sky } from '../lib/weather';
@@ -98,6 +99,7 @@ function Notifications() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [prefs, setPrefsState] = useState(getPrefs);
+  const [how, setHow] = useState(false);
   useEffect(() => { void pushIsOn().then(setOn); }, []);
   if (!house) return null;
 
@@ -108,8 +110,10 @@ function Notifications() {
         <div>
           <b>Notifications</b>
           <p>{needsHomeScreen()
-            ? 'On an iPhone, first add this app to your Home Screen: tap the Share button in Safari, then "Add to Home Screen". Open it from there and come back here.'
+            ? 'On an iPhone, reminders only work once the app is on your Home Screen.'
             : 'This browser cannot show notifications.'}</p>
+          {needsHomeScreen() && <button type="button" className="link" onClick={() => setHow(true)}>Show me how</button>}
+          {how && <InstallSheet onClose={() => setHow(false)} />}
         </div>
       </div>
     );
@@ -312,5 +316,93 @@ export function HouseholdSheet({ onClose, initial = 'create' }: { onClose(): voi
       </button>
       {plants.length > 0 && <p className="muted small">The {plants.length === 1 ? 'plant' : `${plants.length} plants`} already on this phone will be shared too.</p>}
     </Sheet>
+  );
+}
+
+/** How to put the app on the Home Screen, for the phone they are on. */
+export function InstallSheet({ onClose }: { onClose(): void }) {
+  const { house } = useStore();
+  const [, redraw] = useState(0);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => onInstallChange(() => redraw((n) => n + 1)), []);
+  const kind = device();
+  const link = window.location.href.split('#')[0];
+  const copy = async () => { try { await navigator.clipboard.writeText(link); setCopied(true); } catch { /* not allowed */ } };
+  const iphone = kind === 'iphone-safari' || kind === 'iphone-other';
+
+  return (
+    <Sheet title={kind === 'computer' ? 'Use it on your phone' : 'Add it to your Home Screen'} onClose={onClose}>
+      <p className="muted">
+        {kind === 'computer'
+          ? 'Plant Parenthood is made for phones. Open it there, add it to your Home Screen, and it can remind you when a plant needs water.'
+          : 'Phones only send reminders to apps on the Home Screen. It takes a few seconds, and it opens full screen like any other app.'}
+      </p>
+
+      {kind === 'iphone-safari' && (
+        <ol className="steps">
+          <li>Tap the <b>Share</b> button <Share size={15} /> at the bottom of Safari</li>
+          <li>Scroll down and tap <b>Add to Home Screen</b></li>
+          <li>Tap <b>Add</b></li>
+          <li>Open <b>Plant Parenthood</b> from your Home Screen</li>
+        </ol>
+      )}
+      {kind === 'iphone-other' && (
+        <>
+          <ol className="steps">
+            <li>Tap the <b>Share</b> button <Share size={15} /> next to the address bar</li>
+            <li>Tap <b>Add to Home Screen</b> &gt; <b>Add</b></li>
+            <li>Open <b>Plant Parenthood</b> from your Home Screen</li>
+          </ol>
+          <p className="muted small">Can’t see Add to Home Screen? Copy the link, open Safari, paste it in and follow the steps there.</p>
+          <button type="button" className="btn btn-soft wide" onClick={copy}>{copied ? 'Link copied' : 'Copy the link'}</button>
+        </>
+      )}
+      {kind === 'android' && (canPrompt() ? (
+        <button type="button" className="btn btn-primary wide" onClick={() => void promptInstall().then((ok) => { if (ok) onClose(); })}>Install the app</button>
+      ) : (
+        <ol className="steps">
+          <li>Tap <b>⋮</b> at the top right of Chrome</li>
+          <li>Tap <b>Install app</b> or <b>Add to Home screen</b></li>
+          <li>Tap <b>Install</b></li>
+          <li>Open <b>Plant Parenthood</b> from your Home Screen</li>
+        </ol>
+      ))}
+      {kind === 'computer' && (
+        <>
+          <ol className="steps">
+            <li>Open this link on your phone</li>
+            <li>Follow the steps it shows to add it to your Home Screen</li>
+          </ol>
+          <div className="invite"><small>Link</small><b className="link-text">{link.replace(/^https?:\/\//, '')}</b></div>
+          <button type="button" className="btn btn-soft wide" onClick={copy}>{copied ? 'Link copied' : 'Copy the link'}</button>
+        </>
+      )}
+
+      {iphone && (house
+        ? <p className="muted small">The Home Screen app starts empty on an iPhone. To bring your plants, open it, tap Plants &gt; Share with your household &gt; I have a code, and enter <b>{prettyCode(house.code)}</b>.</p>
+        : <p className="muted small">On an iPhone the Home Screen app starts empty, so add your plants there.</p>)}
+      <p className="muted small">Then turn on reminders in the app: tap the cog on Today.</p>
+    </Sheet>
+  );
+}
+
+/** The reminder on Today for anyone still using a browser tab. */
+export function InstallNudge() {
+  const [show, setShow] = useState(remindInstall);
+  const [open, setOpen] = useState(false);
+  if (!show) return null;
+  const computer = device() === 'computer';
+  return (
+    <>
+      <div className="nudge">
+        <Smartphone size={20} />
+        <button type="button" className="nudge-body" onClick={() => setOpen(true)}>
+          <b>{computer ? 'Use it on your phone' : 'Add it to your Home Screen'}</b>
+          <small>{computer ? 'So it can remind you when plants need water.' : 'Then it can remind you when plants need water. Show me how.'}</small>
+        </button>
+        <button type="button" className="nudge-x" aria-label="Later" onClick={() => { installLater(); setShow(false); }}><X size={18} /></button>
+      </div>
+      {open && <InstallSheet onClose={() => setOpen(false)} />}
+    </>
   );
 }

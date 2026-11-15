@@ -1,4 +1,5 @@
 import type { Category, Guide, Season } from './types';
+import { MORE_GUIDES } from './guides-more';
 
 const warm: Season[] = ['summer', 'autumn'];
 
@@ -9,7 +10,7 @@ const bolt =
 const fruitSet =
   'Flowers mean fruit is on the way. Keep watering evenly and feed with a tomato or fruit fertiliser (high in potassium) every two weeks.';
 
-export const GUIDES: Guide[] = [
+const BASE: Guide[] = [
   // ───────── Herbs
   {
     key: 'basil', name: 'Basil', latin: 'Ocimum basilicum', category: 'herb',
@@ -125,7 +126,7 @@ export const GUIDES: Guide[] = [
     },
   },
   {
-    key: 'chilli', name: 'Chilli', aka: ['Capsicum', 'Pepper', 'Bell pepper'], latin: 'Capsicum annuum', category: 'vegetable',
+    key: 'chilli', name: 'Chilli', latin: 'Capsicum annuum', category: 'vegetable',
     waterDays: 3, water: 'Water when the top 2 cm is dry. A little dry stress makes hotter chillies.',
     light: 'Full sun and warmth.',
     repotMonths: 12, frostTender: true,
@@ -134,7 +135,7 @@ export const GUIDES: Guide[] = [
     signs: { flowering: fruitSet },
   },
   {
-    key: 'lettuce', name: 'Lettuce', aka: ['Salad greens', 'Rocket', 'Arugula'], latin: 'Lactuca sativa', category: 'vegetable',
+    key: 'lettuce', name: 'Lettuce', aka: ['Salad greens'], latin: 'Lactuca sativa', category: 'vegetable',
     waterDays: 2, water: 'Shallow roots. Keep the soil moist every day in warm weather.',
     light: 'Sun in cool weather, part shade in summer.',
     repotMonths: 6,
@@ -143,7 +144,7 @@ export const GUIDES: Guide[] = [
     signs: { flowering: bolt, leggy: 'A stretching centre stalk means it is about to bolt. Harvest the whole plant now.' },
   },
   {
-    key: 'spinach', name: 'Spinach', aka: ['Silverbeet', 'Chard', 'Swiss chard'], latin: 'Spinacia oleracea', category: 'vegetable',
+    key: 'spinach', name: 'Spinach', latin: 'Spinacia oleracea', category: 'vegetable',
     waterDays: 2, water: 'Keep moist. Dry spells make it bolt.',
     light: 'Sun to part shade.',
     repotMonths: 6,
@@ -170,7 +171,7 @@ export const GUIDES: Guide[] = [
     signs: { flowering: fruitSet + ' The first flowers are male and drop off. That is normal.', spots: 'White powder is powdery mildew. Remove the worst leaves and spray the rest with one part milk to nine parts water.' },
   },
   {
-    key: 'zucchini', name: 'Zucchini', aka: ['Courgette', 'Squash', 'Pumpkin'], latin: 'Cucurbita pepo', category: 'vegetable',
+    key: 'zucchini', name: 'Zucchini', aka: ['Courgette'], latin: 'Cucurbita pepo', category: 'vegetable',
     waterDays: 2, water: 'Deep watering at the base in the morning.',
     light: 'Full sun.',
     repotMonths: 6, frostTender: true,
@@ -179,7 +180,7 @@ export const GUIDES: Guide[] = [
     signs: { flowering: 'If fruit is not setting, pick a male flower (thin stem) and dab its pollen inside a female flower (tiny fruit behind it).', spots: 'White powder is powdery mildew. Remove the worst leaves and spray the rest with one part milk to nine parts water.' },
   },
   {
-    key: 'carrot', name: 'Carrot', aka: ['Beetroot', 'Radish'], latin: 'Daucus carota', category: 'vegetable',
+    key: 'carrot', name: 'Carrot', latin: 'Daucus carota', category: 'vegetable',
     waterDays: 3, water: 'Even moisture. Drying out then soaking makes roots split.',
     light: 'Full sun.',
     repotMonths: 6,
@@ -187,7 +188,7 @@ export const GUIDES: Guide[] = [
     tips: ['Thin seedlings to 5 cm apart so roots have room.'],
   },
   {
-    key: 'beans', name: 'Beans', aka: ['Peas', 'Snow peas', 'Green beans'], latin: 'Phaseolus vulgaris', category: 'vegetable',
+    key: 'beans', name: 'Beans', aka: ['Green beans'], latin: 'Phaseolus vulgaris', category: 'vegetable',
     waterDays: 3, water: 'Water well once flowering starts.',
     light: 'Full sun.',
     repotMonths: 6,
@@ -196,7 +197,7 @@ export const GUIDES: Guide[] = [
     signs: { flowering: 'Pods are coming. Water consistently now, as dry spells make flowers drop.' },
   },
   {
-    key: 'spring-onion', name: 'Spring onion', aka: ['Scallion', 'Shallot', 'Leek', 'Garlic', 'Onion'], latin: 'Allium fistulosum', category: 'vegetable',
+    key: 'spring-onion', name: 'Spring onion', aka: ['Scallion', 'Shallot'], latin: 'Allium fistulosum', category: 'vegetable',
     waterDays: 3, water: 'Keep moist.',
     light: 'Full sun.',
     repotMonths: 6,
@@ -204,7 +205,7 @@ export const GUIDES: Guide[] = [
     tips: ['Regrow shop-bought ones by planting the white root ends.'],
   },
   {
-    key: 'potato', name: 'Potato', aka: ['Sweet potato'], latin: 'Solanum tuberosum', category: 'vegetable',
+    key: 'potato', name: 'Potato', latin: 'Solanum tuberosum', category: 'vegetable',
     waterDays: 4, water: 'Deep watering, especially once it flowers.',
     light: 'Full sun.',
     repotMonths: 6, frostTender: true,
@@ -224,7 +225,7 @@ export const GUIDES: Guide[] = [
 
   // ───────── Fruit
   {
-    key: 'lemon', name: 'Lemon tree', aka: ['Lime', 'Orange', 'Mandarin', 'Citrus', 'Cumquat'], latin: 'Citrus × limon', category: 'fruit',
+    key: 'lemon', name: 'Lemon tree', aka: ['Citrus'], latin: 'Citrus × limon', category: 'fruit',
     waterDays: 5, water: 'Deep soak, then let the top few centimetres dry.',
     light: 'Full sun, sheltered from cold wind.',
     repotMonths: 30, frostTender: true,
@@ -245,7 +246,7 @@ export const GUIDES: Guide[] = [
     tips: ['Prune in winter while it is bare.', 'Net against birds as fruit colours.'],
   },
   {
-    key: 'blueberry', name: 'Blueberry', aka: ['Raspberry'], latin: 'Vaccinium', category: 'fruit',
+    key: 'blueberry', name: 'Blueberry', latin: 'Vaccinium', category: 'fruit',
     waterDays: 3, water: 'Keep moist. Rainwater is best, it dislikes hard tap water.',
     light: 'Sun to part shade.',
     repotMonths: 24,
@@ -263,10 +264,11 @@ export const GUIDES: Guide[] = [
     signs: { flowering: 'If flowers drop without fruit, hand pollinate with a small brush and keep the water steady.' },
   },
   {
-    key: 'avocado', name: 'Avocado', aka: ['Olive tree', 'Apple tree', 'Mango'], latin: 'Persea americana', category: 'fruit',
+    key: 'avocado', name: 'Avocado', latin: 'Persea americana', category: 'fruit',
     waterDays: 5, water: 'Deep but infrequent. Never leave it sitting in wet soil.',
     light: 'Full sun, out of strong wind.',
     repotMonths: 24, frostTender: true,
+    harvest: { kind: 'seasonal', seasons: ['autumn', 'winter', 'spring'], how: 'Pick when full size and the skin dulls (Hass turns dark). Avocados only soften off the tree, so ripen them on the bench for a few days.' },
     tips: ['Excellent drainage matters more than anything else.', 'Mulch thickly but keep it off the trunk.'],
     signs: { brown_tips: 'Usually salt build-up from tap water or fertiliser. Give it a long, slow flush with plenty of water once a month.' },
   },
@@ -343,7 +345,7 @@ export const GUIDES: Guide[] = [
     tips: ['Trim just above a leaf to encourage fuller growth.'],
   },
   {
-    key: 'calathea', name: 'Calathea', aka: ['Prayer plant', 'Maranta'], latin: 'Goeppertia', category: 'houseplant',
+    key: 'calathea', name: 'Calathea', latin: 'Goeppertia', category: 'houseplant',
     waterDays: 6, water: 'Keep evenly moist with filtered or rainwater.',
     light: 'Medium indirect light. No direct sun.',
     repotMonths: 24, frostTender: true,
@@ -351,7 +353,7 @@ export const GUIDES: Guide[] = [
     signs: { brown_tips: 'Dry air or tap water. Switch to rainwater and raise humidity with a pebble tray or by grouping plants.' },
   },
   {
-    key: 'fern', name: 'Fern', aka: ['Boston fern', 'Maidenhair fern', "Bird's nest fern"], latin: 'Nephrolepis exaltata', category: 'houseplant',
+    key: 'fern', name: 'Fern', latin: 'Nephrolepis exaltata', category: 'houseplant',
     waterDays: 4, water: 'Never let it dry out. Keep the soil lightly damp.',
     light: 'Bright shade. No direct sun.',
     repotMonths: 18, frostTender: true,
@@ -391,7 +393,7 @@ export const GUIDES: Guide[] = [
     tips: ['Wrinkled leaves mean thirsty. Mushy leaves mean too wet.'],
   },
   {
-    key: 'succulent', name: 'Succulent', aka: ['Echeveria', 'String of pearls', 'Sedum'], latin: 'Various', category: 'succulent',
+    key: 'succulent', name: 'Succulent', aka: ['Sedum'], latin: 'Various', category: 'succulent',
     waterDays: 14, water: 'Soak and dry. Water only when the soil is bone dry.',
     light: 'Bright light with a few hours of direct sun.',
     repotMonths: 24, frostTender: true,
@@ -440,7 +442,7 @@ export const GUIDES: Guide[] = [
     signs: { leggy: 'Cut the stems back by half, just above a leaf joint. The cuttings will root if you push them into damp potting mix.' },
   },
   {
-    key: 'camellia', name: 'Camellia', aka: ['Azalea', 'Gardenia', 'Rhododendron'], latin: 'Camellia japonica', category: 'shrub',
+    key: 'camellia', name: 'Camellia', latin: 'Camellia japonica', category: 'shrub',
     waterDays: 5, water: 'Keep evenly moist, especially while buds form.',
     light: 'Part shade, out of hot afternoon sun.',
     repotMonths: 30,
@@ -455,7 +457,7 @@ export const GUIDES: Guide[] = [
     tips: ['Prune after each flush of flowers.'],
   },
   {
-    key: 'hibiscus', name: 'Hibiscus', aka: ['Frangipani'], latin: 'Hibiscus rosa-sinensis', category: 'shrub',
+    key: 'hibiscus', name: 'Hibiscus', latin: 'Hibiscus rosa-sinensis', category: 'shrub',
     waterDays: 4, water: 'Regular water in warm weather.',
     light: 'Full sun.',
     repotMonths: 24, frostTender: true,
@@ -469,7 +471,7 @@ export const GUIDES: Guide[] = [
     tips: ['Prune straight after flowering.'],
   },
   {
-    key: 'native-shrub', name: 'Australian native', aka: ['Grevillea', 'Bottlebrush', 'Kangaroo paw', 'Banksia', 'Lilly pilly', 'Wattle', 'Callistemon'], latin: 'Various', category: 'shrub',
+    key: 'native-shrub', name: 'Australian native', latin: 'Various', category: 'shrub',
     waterDays: 10, water: 'Deep but infrequent once established.',
     light: 'Full sun.',
     repotMonths: 30,
@@ -484,7 +486,7 @@ export const GUIDES: Guide[] = [
     tips: ['Stake tall varieties.'],
   },
   {
-    key: 'annual-flowers', name: 'Petunias', aka: ['Marigold', 'Pansy', 'Impatiens', 'Annual flowers', 'Dahlia'], latin: 'Various', category: 'flower',
+    key: 'annual-flowers', name: 'Petunias', aka: ['Impatiens', 'Annual flowers'], latin: 'Various', category: 'flower',
     waterDays: 2, water: 'Keep moist. Pots and baskets may need water daily in summer.',
     light: 'Sun to part shade.',
     repotMonths: 6, frostTender: true,
@@ -492,13 +494,15 @@ export const GUIDES: Guide[] = [
     signs: { leggy: 'Cut the whole plant back by half and feed it. It will bush out and flower again in two to three weeks.' },
   },
   {
-    key: 'agapanthus', name: 'Agapanthus', aka: ['Clivia', 'Daylily'], latin: 'Agapanthus', category: 'flower',
+    key: 'agapanthus', name: 'Agapanthus', latin: 'Agapanthus', category: 'flower',
     waterDays: 8, water: 'Tough once established. Water in dry spells.',
     light: 'Sun to part shade.',
     repotMonths: 36,
     tips: ['Cut off seed heads after flowering so it does not spread.'],
   },
 ];
+
+export const GUIDES: Guide[] = [...BASE, ...MORE_GUIDES];
 
 const byKey = new Map(GUIDES.map((g) => [g.key, g]));
 

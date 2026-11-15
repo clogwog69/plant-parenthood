@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { back, go } from '../App';
 import { aiMessage, runAI, type Identified, type TagRead } from '../lib/ai';
 import { DAY, placement } from '../lib/care';
-import { CATEGORY_LABEL, searchGuides, type Match } from '../lib/guide';
+import { CATEGORY_LABEL, GUIDES, searchGuides, type Match } from '../lib/guide';
 import type { Shot } from '../lib/photo';
 import type { Category, Place, TagInfo } from '../lib/types';
 import { useStore } from '../store';
@@ -33,8 +33,11 @@ export function AddPlant() {
   const ready = !!picked || (isCustom && !!custom);
 
   /** Fill in the "What is it?" box from a name the photo or tag gave us. */
-  const suggest = (found: string, category?: Category) => {
-    const hit = searchGuides(found)[0] ?? searchGuides(found.split(/\s+/).slice(-1)[0])[0];
+  const suggest = (found: string, category?: Category, careLike?: string) => {
+    const exact = searchGuides(found).find((m) => m.label.toLowerCase() === found.toLowerCase());
+    const like = careLike ? GUIDES.find((g) => g.key === careLike) : undefined;
+    if (!exact && like) { setPicked({ guide: like, label: found }); setQuery(''); return; }
+    const hit = exact ?? searchGuides(found)[0] ?? searchGuides(found.split(/\s+/).slice(-1)[0])[0];
     if (hit) { setPicked({ guide: hit.guide, label: hit.label }); setQuery(''); return; }
     setPicked(null);
     setQuery(found);
@@ -49,7 +52,7 @@ export function AddPlant() {
       const found = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';
       if (!found) setAiNote('Could not tell what that is. Try a clearer photo, or type the name.');
       else {
-        suggest(found, r.category);
+        suggest(found, r.category, typeof r.careLike === 'string' ? r.careLike : undefined);
         setAiNote(`That looks like ${found}${r.latin ? ` (${r.latin})` : ''}${r.confidence === 'low' ? ', but it is hard to be sure' : ''}. Change it below if that is wrong.`);
       }
     } catch (e) { setAiNote(aiMessage(e)); }
@@ -124,7 +127,7 @@ export function AddPlant() {
         <h2>What is it?</h2>
         {picked ? (
           <div className="picked">
-            <span><b>{picked.label}</b><small>{picked.guide.latin} · {CATEGORY_LABEL[picked.guide.category]}</small></span>
+            <span><b>{picked.label}</b><small>{[picked.guide.name, ...(picked.guide.aka ?? [])].some((n) => n.toLowerCase() === picked.label.toLowerCase()) ? `${picked.guide.latin} · ${CATEGORY_LABEL[picked.guide.category]}` : `Cared for like ${picked.guide.name.toLowerCase()}`}</small></span>
             <button type="button" className="icon-btn" onClick={() => { setPicked(null); setQuery(''); }} aria-label="Change plant"><X size={18} /></button>
           </div>
         ) : (

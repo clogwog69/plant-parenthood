@@ -3,3 +3,4 @@ dist
 .claude
 .DS_Store
 helper/config.json
+helper/helper.log

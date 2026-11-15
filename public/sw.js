@@ -1,5 +1,5 @@
 // Minimal offline shell: network first, fall back to cache.
-const CACHE = 'sprout-v3';
+const CACHE = 'sprout-v4';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (e) => {
@@ -23,8 +23,8 @@ self.addEventListener('push', (e) => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'Plant Parenthood', {
       body: data.body || '',
-      icon: './icon-192.png',
-      badge: './icon-192.png',
+      icon: './notify-icon.png',
+      badge: './notify-badge.png',
       tag: data.tag,
     }),
   );

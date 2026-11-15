@@ -10,6 +10,8 @@ export interface Identified {
   name: string;
   latin?: string;
   category?: Category;
+  /** Key of the known plant whose care is closest. */
+  careLike?: string;
   confidence?: 'high' | 'medium' | 'low';
 }
 export interface TagRead {

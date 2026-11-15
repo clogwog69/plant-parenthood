@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { guideFor } from '../lib/guide';
 import { shoot, type Shot } from '../lib/photo';
-import { disablePush, enablePush, needsHomeScreen, pushBlocked, pushIsOn, pushSupported } from '../lib/push';
+import { PUSH_CHOICES, disablePush, enablePush, getPrefs, needsHomeScreen, pushBlocked, pushIsOn, pushSupported, setPrefs, type PushPrefs } from '../lib/push';
 import { cleanCode, prettyCode } from '../lib/sync';
 import type { Location, Plant } from '../lib/types';
 import { currentPosition, searchPlaces, type Sky } from '../lib/weather';
@@ -97,6 +97,7 @@ function Notifications() {
   const [on, setOn] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const [prefs, setPrefsState] = useState(getPrefs);
   useEffect(() => { void pushIsOn().then(setOn); }, []);
   if (!house) return null;
 
@@ -121,16 +122,54 @@ function Notifications() {
     } catch (e) { setNote(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
     setBusy(false);
   };
+  const choose = async (key: keyof PushPrefs) => {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefsState(next); setNote('');
+    try { await setPrefs(house.code, me, next); }
+    catch { setPrefsState(prefs); setNote('Could not save that choice. Check your connection and try again.'); }
+  };
   return (
     <div className="notif">
       {on ? <Bell size={20} /> : <BellOff size={20} />}
       <div>
         <b>{on ? 'Notifications are on' : 'Notifications'}</b>
-        <p>{on ? 'This phone gets a morning list of jobs, and a ping when someone else looks after a plant.' : 'Get a morning list of jobs, and a ping when someone else waters or checks a plant.'}</p>
+        <p>{on ? 'Choose what this phone hears about.' : 'Get a morning list of jobs, and a ping when someone else waters or checks a plant. You choose which.'}</p>
+        {on && (
+          <ul className="choices">
+            {PUSH_CHOICES.map((c) => (
+              <li key={c.key}>
+                <label>
+                  <span><b>{c.label}</b><small>{c.detail}</small></span>
+                  <input type="checkbox" role="switch" checked={prefs[c.key]} onChange={() => void choose(c.key)} />
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
         {(note || pushBlocked()) && <p className="warn">{note || 'Notifications are blocked for this app. Allow them in your phone settings.'}</p>}
-        <button type="button" className="link" disabled={busy || on === null} onClick={toggle}>{busy ? 'One moment…' : on ? 'Turn off on this phone' : 'Turn on notifications'}</button>
+        <button type="button" className="link" disabled={busy || on === null} onClick={toggle}>{busy ? 'One moment…' : on ? 'Turn all off on this phone' : 'Turn on notifications'}</button>
       </div>
     </div>
+  );
+}
+
+/** Settings, reached from the cog on Today. */
+export function SettingsSheet({ onClose, onShare }: { onClose(): void; onShare(): void }) {
+  const { house, me } = useStore();
+  return (
+    <Sheet title="Settings" onClose={onClose}>
+      {house ? <Notifications /> : (
+        <div className="notif">
+          <BellOff size={20} />
+          <div>
+            <b>Notifications</b>
+            <p>Notifications work once you share a household, even if it is just you in it.</p>
+            <button type="button" className="link" onClick={onShare}>Set up a household</button>
+          </div>
+        </div>
+      )}
+      {house && <p className="muted small">{me ? `You are ${me}, in ${house.name}. ` : ''}These choices are for this phone only. Everyone else picks their own.</p>}
+    </Sheet>
   );
 }
 

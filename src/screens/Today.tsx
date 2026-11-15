@@ -1,4 +1,4 @@
-import { Bell, Camera, Check, CloudRain, Droplet, Flame, MapPin, Scissors, Shovel, Snowflake, Sparkles, Sprout, X } from 'lucide-react';
+import { Bell, Camera, Check, CloudRain, Droplet, Flame, MapPin, Scissors, Settings, Shovel, Snowflake, Sparkles, Sprout, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { go } from '../App';
 import { DAY, alertsFor, allTasks, dueLabel, plantName, seasonFor, startOfDay } from '../lib/care';
@@ -7,7 +7,7 @@ import { syncAvailable } from '../lib/sync';
 import type { Plant, Task } from '../lib/types';
 import { describe } from '../lib/weather';
 import { useStore } from '../store';
-import { Avatar, HouseholdSheet, LocationSheet, SkyIcon } from '../ui/bits';
+import { Avatar, HouseholdSheet, LocationSheet, SettingsSheet, SkyIcon } from '../ui/bits';
 
 const DID = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', fed: 'fed', added: 'added' };
 
@@ -82,6 +82,7 @@ export function Today() {
   const [sheet, setSheet] = useState(false);
   const [sharing, setSharing] = useState<false | 'create' | 'join'>(false);
   const [nudge, setNudge] = useState(false);
+  const [settings, setSettings] = useState(false);
   useEffect(() => {
     if (!house || localStorage.getItem('sprout.pushNudge')) { setNudge(false); return; }
     if (needsHomeScreen()) { setNudge(true); return; }
@@ -118,9 +119,12 @@ export function Today() {
           <p className="eyebrow">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           <h1>{greeting()}</h1>
         </div>
-        <button type="button" className="pill" onClick={() => setSheet(true)}>
-          <MapPin size={15} /> {location ? location.name.split(',')[0] : 'Set location'}
-        </button>
+        <div className="top-actions">
+          <button type="button" className="pill" onClick={() => setSheet(true)}>
+            <MapPin size={15} /> {location ? location.name.split(',')[0] : 'Set location'}
+          </button>
+          <button type="button" className="icon-btn" onClick={() => setSettings(true)} aria-label="Settings"><Settings size={19} /></button>
+        </div>
       </header>
 
       {weather && today ? (
@@ -163,7 +167,7 @@ export function Today() {
       {nudge && (
         <div className="nudge">
           <Bell size={20} />
-          <button type="button" className="nudge-body" onClick={() => setSharing('create')}>
+          <button type="button" className="nudge-body" onClick={() => (house ? setSettings(true) : setSharing('create'))}>
             <b>Get notifications</b>
             <small>A morning list of jobs, and a ping when someone waters.</small>
           </button>
@@ -220,6 +224,7 @@ export function Today() {
       )}
 
       {sheet && <LocationSheet onClose={() => setSheet(false)} />}
+      {settings && <SettingsSheet onClose={() => setSettings(false)} onShare={() => { setSettings(false); setSharing('create'); }} />}
       {sharing && <HouseholdSheet initial={sharing} onClose={() => setSharing(false)} />}
     </main>
   );

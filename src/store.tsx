@@ -4,7 +4,7 @@ import { digest, plantName } from './lib/care';
 import { adviceFor, applyAdvice } from './lib/checkin';
 import * as db from './lib/db';
 import type { Shot } from './lib/photo';
-import { notifyHouse } from './lib/push';
+import { notifyHouse, type PushKind } from './lib/push';
 import * as remote from './lib/sync';
 import type { House } from './lib/sync';
 import type { Advice, AdviceKind, Checkin, EventType, Location, Photo, Place, Plant, Sign, TagInfo, Weather } from './lib/types';
@@ -282,9 +282,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const store = useMemo<Store>(() => {
     const who = () => (houseRef.current && meRef.current ? meRef.current : undefined);
     /** Let the rest of the household know, if they have notifications on. */
-    const tell = (did: string, p: Plant | undefined | null) => {
+    const tell = (kind: PushKind, did: string, p: Plant | undefined | null) => {
       const h = houseRef.current;
-      if (h && meRef.current && p) notifyHouse(h.code, `${meRef.current} ${did} ${plantName(p)}`, h.name);
+      if (h && meRef.current && p) notifyHouse(h.code, kind, `${meRef.current} ${did} ${plantName(p)}`, h.name);
     };
     return {
       ready, plants, location, weather, weatherFailed, view, house, me, syncState,
@@ -309,7 +309,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         commit([...ref.current, plant]);
         void db.putPlant(plant);
         markDirty(id, 'put');
-        tell('added', plant);
+        tell('plant', 'added', plant);
         return plant;
       },
 
@@ -322,7 +322,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       log(id, type) {
         const now = Date.now();
-        tell(DID[type], patch(id, (p) => ({
+        tell('care', DID[type], patch(id, (p) => ({
           ...p,
           [STAMP[type]]: now,
           holdWaterUntil: type === 'watered' ? undefined : p.holdWaterUntil,
@@ -346,7 +346,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       checkIn(id, signs, note, shot) {
         const now = Date.now();
         let made: Checkin | null = null;
-        tell('checked on', patch(id, (p) => {
+        tell('checkin', 'checked on', patch(id, (p) => {
           const advice = adviceFor(p, signs, now);
           const photoId = shot ? uid() : undefined;
           if (shot && photoId) savePhoto({ id: photoId, plantId: id, date: now, dataUrl: shot.full });
@@ -366,7 +366,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const now = Date.now();
         const photoId = uid();
         savePhoto({ id: photoId, plantId: id, date: now, dataUrl: shot.full });
-        tell('added a photo of', patch(id, (p) => ({
+        tell('checkin', 'added a photo of', patch(id, (p) => ({
           ...p,
           checkins: [{ id: uid(), date: now, kind: 'photo', photoId, thumb: shot.thumb, signs: [], advice: [], by: who() }, ...p.checkins],
           thumb: shot.thumb,

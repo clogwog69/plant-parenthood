@@ -2,6 +2,31 @@
 import { SetupError, pushFn } from './sync';
 
 const K = 'sprout.pushEndpoint';
+const P = 'sprout.pushPrefs';
+
+/** What this phone wants to hear about. Everything is on to begin with. */
+export interface PushPrefs { morning: boolean; care: boolean; checkin: boolean; plant: boolean }
+export type PushKind = Exclude<keyof PushPrefs, 'morning'>;
+export const PUSH_CHOICES: { key: keyof PushPrefs; label: string; detail: string }[] = [
+  { key: 'morning', label: 'Morning list', detail: 'Today\'s plant jobs, once a morning' },
+  { key: 'care', label: 'Watering and care', detail: 'Someone watered, fed, repotted or picked' },
+  { key: 'checkin', label: 'Check-ins and photos', detail: 'Someone checked on a plant or added a photo' },
+  { key: 'plant', label: 'New plants', detail: 'Someone added a plant' },
+];
+
+export function getPrefs(): PushPrefs {
+  let saved: Partial<PushPrefs> = {};
+  try { saved = JSON.parse(localStorage.getItem(P) ?? '{}') as Partial<PushPrefs>; } catch { /* use defaults */ }
+  return { morning: saved.morning !== false, care: saved.care !== false, checkin: saved.checkin !== false, plant: saved.plant !== false };
+}
+
+/** Saves the choices on this phone and with the server. Throws if the server did not get them. */
+export async function setPrefs(code: string, name: string, prefs: PushPrefs): Promise<void> {
+  const sub = await (await registration()).pushManager.getSubscription();
+  if (!sub) throw new Error('off');
+  await pushFn({ action: 'subscribe', code, name, sub: sub.toJSON(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone, prefs });
+  try { localStorage.setItem(P, JSON.stringify(prefs)); } catch { /* private mode */ }
+}
 
 export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 export const pushBlocked = () => pushSupported() && Notification.permission === 'denied';
@@ -44,7 +69,7 @@ export async function enablePush(code: string, name: string): Promise<void> {
     const { key } = await pushFn<{ key: string }>({ action: 'key' });
     const sub = (await reg.pushManager.getSubscription())
       ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) }));
-    await pushFn({ action: 'subscribe', code, name, sub: sub.toJSON(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone });
+    await pushFn({ action: 'subscribe', code, name, sub: sub.toJSON(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone, prefs: getPrefs() });
     localStorage.setItem(K, sub.endpoint);
   } catch (e) {
     throw new Error(e instanceof SetupError ? 'Notifications are not set up yet.' : 'Could not turn notifications on. Check your connection and try again.');
@@ -63,8 +88,8 @@ export async function disablePush(): Promise<void> {
 }
 
 /** Tell everyone else in the household. Never blocks or fails the action. */
-export function notifyHouse(code: string, title: string, body: string) {
+export function notifyHouse(code: string, kind: PushKind, title: string, body: string) {
   let from: string | null = null;
   try { from = localStorage.getItem(K); } catch { /* private mode */ }
-  void pushFn({ action: 'notify', code, title, body, from }).catch(() => {});
+  void pushFn({ action: 'notify', code, kind, title, body, from }).catch(() => {});
 }

@@ -36,7 +36,13 @@ async function houseId(code: unknown): Promise<string | null> {
   return (data as string | null) ?? null;
 }
 
-interface Sub { endpoint: string; sub: webpush.PushSubscription }
+// Each phone chooses what it hears about. Anything not switched off is on.
+const KINDS = ['morning', 'care', 'checkin', 'plant'] as const;
+type Prefs = Partial<Record<(typeof KINDS)[number], boolean>>;
+const wants = (s: { sub: { prefs?: Prefs } }, kind: unknown) =>
+  !KINDS.includes(kind as (typeof KINDS)[number]) || s.sub?.prefs?.[kind as (typeof KINDS)[number]] !== false;
+
+interface Sub { endpoint: string; sub: webpush.PushSubscription & { prefs?: Prefs } }
 /** Sends one notification; forgets phones that have switched them off. */
 async function send(to: Sub, title: string, body: string): Promise<boolean> {
   const k = await keys();
@@ -70,7 +76,7 @@ async function digest(): Promise<number> {
   let sent = 0;
   for (const s of subs ?? []) {
     const { date, hour } = localNow(s.tz);
-    if (hour < 8 || hour > 11 || s.last_digest === date) continue;
+    if (hour < 8 || hour > 11 || s.last_digest === date || !wants(s, 'morning')) continue;
     if (!houses.has(s.household_id)) {
       const { data } = await db.from('sprout_households').select('digest').eq('id', s.household_id).maybeSingle();
       houses.set(s.household_id, Array.isArray(data?.digest) ? data.digest : []);
@@ -100,7 +106,10 @@ Deno.serve(async (req) => {
         if (!h || typeof endpoint !== 'string' || !endpoint.startsWith('https://') || !b.sub?.keys?.p256dh || !b.sub?.keys?.auth) return json({ error: 'bad request' }, 400);
         const { error } = await db.from('sprout_push_subs').upsert({
           endpoint, household_id: h, name: text(b.name, 40),
-          sub: { endpoint, keys: { p256dh: text(b.sub.keys.p256dh, 200), auth: text(b.sub.keys.auth, 100) } },
+          sub: {
+            endpoint, keys: { p256dh: text(b.sub.keys.p256dh, 200), auth: text(b.sub.keys.auth, 100) },
+            prefs: Object.fromEntries(KINDS.map((k) => [k, b.prefs?.[k] !== false])),
+          },
           tz: text(b.tz, 60),
         });
         if (error) throw error;
@@ -115,7 +124,7 @@ Deno.serve(async (req) => {
         const h = await houseId(b.code);
         if (!h) return json({ error: 'bad request' }, 400);
         const { data: subs } = await db.from('sprout_push_subs').select('endpoint, sub').eq('household_id', h);
-        const others = (subs ?? []).filter((s) => s.endpoint !== b.from).slice(0, 20);
+        const others = (subs ?? []).filter((s) => s.endpoint !== b.from && wants(s, b.kind)).slice(0, 20);
         const done = await Promise.all(others.map((s) => send(s, text(b.title, 80), text(b.body, 200))));
         return json({ sent: done.filter(Boolean).length });
       }

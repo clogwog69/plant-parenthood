@@ -1,5 +1,10 @@
 import type { Category, Guide, Season } from './types';
 import { MORE_GUIDES } from './guides-more';
+import { VEG_HERBS } from './guides/veg-herbs';
+import { FRUIT } from './guides/fruit';
+import { INDOOR } from './guides/indoor';
+import { FLOWERS } from './guides/flowers';
+import { SHRUBS } from './guides/shrubs';
 
 const warm: Season[] = ['summer', 'autumn'];
 
@@ -502,7 +507,7 @@ const BASE: Guide[] = [
   },
 ];
 
-export const GUIDES: Guide[] = [...BASE, ...MORE_GUIDES];
+export const GUIDES: Guide[] = [...BASE, ...MORE_GUIDES, ...VEG_HERBS, ...FRUIT, ...INDOOR, ...FLOWERS, ...SHRUBS];
 
 const byKey = new Map(GUIDES.map((g) => [g.key, g]));
 

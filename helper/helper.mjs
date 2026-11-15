@@ -72,11 +72,14 @@ Rules:
 // two never drift apart. Claude picks the closest one for care.
 function knownPlants() {
   const names = [];
-  for (const f of ['guide.ts', 'guides-more.ts']) {
-    const file = join(HERE, '..', 'src', 'lib', f);
+  const lib = join(HERE, '..', 'src', 'lib');
+  const more = join(lib, 'guides');
+  const files = [join(lib, 'guide.ts'), join(lib, 'guides-more.ts')];
+  if (existsSync(more)) for (const f of readdirSync(more)) if (f.endsWith('.ts')) files.push(join(more, f));
+  for (const file of files) {
     if (!existsSync(file)) continue;
     const src = readFileSync(file, 'utf8');
-    for (const m of src.matchAll(/key: '([^']+)', name: '([^']+)'/g)) names.push(`${m[1]}=${m[2]}`);
+    for (const m of src.matchAll(/key:\s*'([^']+)',\s*name:\s*(['"])(.+?)\2/g)) names.push(`${m[1]}=${m[3]}`);
   }
   return names;
 }

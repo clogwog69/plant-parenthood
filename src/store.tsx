@@ -85,6 +85,11 @@ const STAMP: Record<Exclude<EventType, 'added'>, 'lastWatered' | 'lastRepotted' 
 };
 
 const DID: Record<Exclude<EventType, 'added'>, string> = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', fed: 'fed' };
+/** Notification titles. The service worker reads these back to bundle "Watered 6 plants". */
+const HAPPENED: Record<string, string> = {
+  watered: 'Watered', fed: 'Fed', repotted: 'Repotted', 'picked from': 'Picked from',
+  'checked on': 'Checked on', 'added a photo of': 'New photo of', added: 'Added',
+};
 const DX_KIND: Record<string, AdviceKind> = { water: 'water', hold: 'hold', repot: 'repot', feed: 'care', prune: 'prune', harvest: 'harvest', care: 'care', good: 'good' };
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -286,7 +291,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     /** Let the rest of the household know, if they have notifications on. */
     const tell = (kind: PushKind, did: string, p: Plant | undefined | null) => {
       const h = houseRef.current;
-      if (h && meRef.current && p) notifyHouse(h.code, kind, `${meRef.current} ${did} ${plantName(p)}`, h.name);
+      // What happened goes first, because phones cut the title short: "Watered Basil" / "By Simone · Home".
+      if (h && meRef.current && p) notifyHouse(h.code, kind, `${HAPPENED[did] ?? did} ${plantName(p)}`, `By ${meRef.current} · ${h.name}`);
     };
     return {
       ready, plants, location, weather, weatherFailed, view, house, me, syncState,

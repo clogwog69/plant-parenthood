@@ -1,5 +1,5 @@
 // Minimal offline shell: network first, fall back to cache.
-const CACHE = 'sprout-v5';
+const CACHE = 'sprout-v6';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (e) => {
@@ -16,41 +16,37 @@ self.addEventListener('fetch', (e) => {
   );
 });
 
-// Notifications: "Watered Basil" and the morning list of jobs.
-// When someone does the same job to several plants, the phone shows one "Watered 6 plants"
-// instead of six separate notifications.
-const ACTIONS = ['Watered', 'Fed', 'Repotted', 'Picked from', 'Checked on', 'New photo of', 'Added'];
-const PLURAL = { 'New photo of': 'New photos of' };
+// Notifications: "Prescott Drive / Simone watered Basil" and the morning list of jobs.
+// When someone does the same job to several plants, the phone shows one
+// "Simone watered 6 plants: Basil, Mint…" instead of six separate notifications.
+// Longest first, so "added a photo of" wins over "added".
+const VERBS = ['added a photo of', 'picked from', 'checked on', 'repotted', 'watered', 'added', 'fed'];
 const BUNDLE_FOR = 30 * 60 * 1000;
 
 function listPlants(names) {
-  const uniq = [...new Set(names)];
-  if (uniq.length <= 3) return uniq.length === 1 ? uniq[0] : `${uniq.slice(0, -1).join(', ')} and ${uniq[uniq.length - 1]}`;
-  return `${uniq.slice(0, 3).join(', ')} and ${uniq.length - 3} more`;
+  if (names.length <= 3) return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
 }
 
 async function show(data) {
   const title = data.title || 'Plant Parenthood';
   const body = data.body || '';
-  const action = ACTIONS.find((a) => title.startsWith(a + ' '));
-  if (!action) {
-    return self.registration.showNotification(title, { body, icon: './notify-icon.png', badge: './notify-badge.png', tag: data.tag });
+  const plain = { body, icon: './notify-icon.png', badge: './notify-badge.png', tag: data.tag };
+  let who, verb, plant;
+  for (const v of VERBS) {
+    const at = body.indexOf(` ${v} `);
+    if (at > 0) { who = body.slice(0, at); verb = v; plant = body.slice(at + v.length + 2); break; }
   }
-  const plant = title.slice(action.length + 1);
-  const tag = `did:${action}:${body}`;
+  if (!verb) return self.registration.showNotification(title, plain);
+
+  const tag = `did:${title}:${who}:${verb}`;
   const now = Date.now();
-  const earlier = (await self.registration.getNotifications({ tag }))
-    .find((n) => n.data && now - n.data.at < BUNDLE_FOR);
-  const plants = [...(earlier ? earlier.data.plants : []), plant];
-  const count = new Set(plants).size;
-  const words = count === 1 ? title : `${PLURAL[action] || action} ${count} plants`;
-  const by = body.replace(/ · .*$/, '');
-  return self.registration.showNotification(words, {
-    body: count === 1 ? body : `${listPlants(plants)}. ${by}.`,
-    icon: './notify-icon.png',
-    badge: './notify-badge.png',
+  const earlier = (await self.registration.getNotifications({ tag })).find((n) => n.data && now - n.data.at < BUNDLE_FOR);
+  const plants = [...new Set([...(earlier ? earlier.data.plants : []), plant])];
+  return self.registration.showNotification(title, {
+    ...plain,
+    body: plants.length === 1 ? body : `${who} ${verb} ${plants.length} plants: ${listPlants(plants)}`,
     tag,
-    renotify: false,
     data: { at: earlier ? earlier.data.at : now, plants },
   });
 }

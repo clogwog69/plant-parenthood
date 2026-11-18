@@ -8,6 +8,7 @@ import { CATEGORY_LABEL, guideFor } from '../lib/guide';
 import type { EventType, Plant, TagInfo } from '../lib/types';
 import { useStore, usePhoto } from '../store';
 import { Avatar, PhotoButton } from '../ui/bits';
+import { SunBars } from '../ui/SunBars';
 import { EditPlantSheet } from './EditPlant';
 import { TaskIcon, taskTone, useTaskDone } from './Today';
 
@@ -190,6 +191,7 @@ export function PlantDetail({ id }: { id: string }) {
             <small>{plant.place === 'garden' ? 'Outdoor plant' : 'Indoor plant'}{location ? ` · advice for ${location.name}` : ''}</small>
           </div>
         </div>
+        <SunBars plant={plant} />
       </section>
 
       <section>

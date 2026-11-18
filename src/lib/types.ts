@@ -122,6 +122,8 @@ export interface Plant {
   createdAt: number;
   /** Last change on any phone; the newest copy wins when syncing. */
   updatedAt?: number;
+  /** How much sun it actually gets, by clock hour (6 = 6am to 7am), as the household marked it. */
+  sun?: Record<number, 'full' | 'shade' | 'bright' | 'low'>;
   thumb?: string;
   photoId?: string;
   lastWatered?: number;

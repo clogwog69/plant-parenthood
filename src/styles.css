@@ -370,3 +370,42 @@ h1 { font: 600 32px/1.1 var(--serif); letter-spacing: -0.02em; }
 .who.on .avatar, .who.on .who-none { outline-color: var(--green); }
 .who small { font-size: 12px; width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .who.on small { color: var(--green); font-weight: 600; }
+
+/* Sun through the day */
+.sun { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.sun-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.sun-head span { display: inline-flex; align-items: center; gap: 4px; }
+.sun-title { margin: 0 0 6px; font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; }
+.sun-title + .sunbar, .sun-title + .sun-edit { margin-top: 0; }
+.sun-title:not(:first-of-type) { margin-top: 14px; }
+.sunbar { display: grid; gap: 2px; height: 28px; border-radius: 9px; overflow: hidden; }
+.sun-h { display: block; }
+.l-full { background: #ffd21f; }
+.l-shade { background: #a9820f; }
+.l-bright { background: #dcdad3; }
+.l-low { background: #8d8c86; }
+.l-none { background: repeating-linear-gradient(135deg, #f1ede3 0 5px, #e6e1d4 5px 10px); }
+.sun-edit { border-radius: 10px; }
+.sun-edit:not(.on) { cursor: pointer; }
+.sun-edit.on { touch-action: none; outline: 2px solid var(--green); outline-offset: 2px; }
+.sun-ticks { display: grid; font-size: 11px; color: var(--muted); margin-top: 3px; }
+.sun-ticks span { white-space: nowrap; overflow: visible; }
+.sun-say { font-size: 13px; color: #3b463e; margin-top: 4px; }
+.link-btn { color: var(--green); font-weight: 600; font-size: 14px; }
+.sun-tools { margin-top: 10px; display: grid; gap: 10px; }
+.sun-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-size: 13px; }
+.swatch.on { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 600; }
+.dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.sun-actions { display: flex; gap: 8px; }
+.sun-actions .btn { flex: 1; }
+.sun-off { margin-top: 10px; display: grid; gap: 6px; }
+.sun-off li { font-size: 14px; background: var(--clay-soft); border-radius: 12px; padding: 8px 10px; }
+.sun-off b { margin-right: 4px; }
+.sun-good { margin-top: 10px; font-size: 14px; color: var(--green); display: flex; align-items: center; gap: 6px; }
+.sun-key { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.sun-key span { display: inline-flex; align-items: center; gap: 5px; }
+.sun-key .dot { width: 10px; height: 10px; }
+.sun-hot { display: flex; gap: 8px; align-items: flex-start; background: #fbe6c8; color: #7a4a06; border-radius: 12px; padding: 10px; margin-bottom: 12px; font-size: 14px; }
+.sun-hot svg { flex: none; margin-top: 2px; }
+.sun-hot.ok { background: var(--green-soft); color: var(--green); }

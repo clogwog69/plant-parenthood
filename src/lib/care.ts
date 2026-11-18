@@ -1,4 +1,5 @@
 import { guideFor } from './guide';
+import { hotDay, middaySunburn } from './sun';
 import type { Category, Location, Plant, Season, Task, Weather } from './types';
 
 export const DAY = 86_400_000;
@@ -331,6 +332,16 @@ export function alertsFor(plants: Plant[], weather: Weather | null): Alert[] {
       kind: 'heat',
       title: `Heatwave ${heat.date === weather.today ? 'today' : 'on ' + weekday(heat.date)} (${Math.round(heat.tmax)}°)`,
       detail: 'Water deeply early in the morning, move pots into shade, and do not fertilise or prune until it cools.',
+    });
+  }
+  // A hot day that is not a heatwave still scorches leaves that want a break at midday.
+  const warm = hotDay(weather);
+  const tender2 = middaySunburn(plants);
+  if (warm && !heat && tender2.length) {
+    out.push({
+      kind: 'heat',
+      title: `Hot ${warm.today ? 'today' : 'tomorrow'} (${Math.round(warm.tmax)}°)`,
+      detail: `Move ${listNames(tender2.map(plantName))} into shade from 11am to 2pm.`,
     });
   }
   return out;

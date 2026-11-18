@@ -48,6 +48,8 @@ interface Store {
   setTag(id: string, tag: TagInfo | undefined): void;
   /** Change what it is, where it lives or its nickname. */
   editPlant(id: string, changes: Partial<Pick<Plant, 'guideKey' | 'species' | 'nickname' | 'place' | 'potted'>>): void;
+  /** Save how much sun it gets through the day. Empty clears it. */
+  setSun(id: string, sun: Plant['sun']): void;
   /** Fold what the photo diagnosis found into a check-in. */
   diagnose(id: string, checkinId: string, dx: Diagnosis): void;
   createHouse(name: string, me: string): Promise<void>;
@@ -383,6 +385,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       editPlant(id, changes) {
         patch(id, (p) => ({ ...p, ...changes, nickname: (changes.nickname ?? p.nickname)?.trim() || undefined }));
+      },
+
+      setSun(id, sun) {
+        patch(id, (p) => ({ ...p, sun: sun && Object.keys(sun).length ? sun : undefined }));
       },
 
       diagnose(id, checkinId, dx) {

@@ -12,6 +12,20 @@ export const LIGHTS: { value: Light; label: string; short: string }[] = [
 ];
 export const LIGHT_LABEL = Object.fromEntries(LIGHTS.map((l) => [l.value, l.label])) as Record<Light, string>;
 
+type Place = Plant['place'];
+// The same colours mean slightly different things inside and out.
+const NAMES: Record<Place, Record<Light, string>> = {
+  garden: { full: 'Full sun', shade: 'Shade', bright: 'Bright, no sunbeams', low: 'Low light' },
+  indoor: { full: 'Direct sun at a window', shade: 'Shade', bright: 'Bright, out of the sunbeams', low: 'Low light, back from the window' },
+};
+export const lightName = (l: Light, place: Place = 'garden') => NAMES[place][l];
+const SHORT: Record<Place, Record<Light, string>> = {
+  garden: { full: 'Full sun', shade: 'Shade', bright: 'Bright', low: 'Low light' },
+  indoor: { full: 'Window sun', shade: 'Shade', bright: 'Bright', low: 'Low light' },
+};
+export const lightShort = (l: Light, place: Place = 'garden') => SHORT[place][l];
+export const lightsFor = (place: Place) => LIGHTS.filter((l) => place === 'garden' ? l.value !== 'bright' && l.value !== 'low' : l.value !== 'shade');
+
 /** The three hottest hours, 11am to 2pm. */
 export const MIDDAY = [11, 12, 13];
 /** Hot enough that tender leaves scorch in the midday sun. */
@@ -35,8 +49,16 @@ function shapeOf(g: Guide): Shape {
   return 'full';
 }
 
-/** What the plant wants in the hour starting at `h` (0 to 23). */
-export function wantAt(g: Guide, h: number): Light {
+/** What the plant wants in the hour starting at `h` (0 to 23), where it lives now. */
+export function wantAt(g: Guide, h: number, place: Place = 'garden'): Light {
+  const l = wantAnywhere(g, h);
+  // Indoors there is no shade cloth: a break from the sun means bright light away from the glass.
+  if (place === 'indoor') return l === 'shade' ? 'bright' : l;
+  // Outdoors, a plant that wants bright or low light indoors wants shade.
+  return l === 'bright' || l === 'low' ? 'shade' : l;
+}
+
+function wantAnywhere(g: Guide, h: number): Light {
   switch (shapeOf(g)) {
     case 'full': return 'full';
     case 'midday': return MIDDAY.includes(h) ? 'shade' : 'full';
@@ -48,9 +70,9 @@ export function wantAt(g: Guide, h: number): Light {
   }
 }
 
-export function wants(p: Pick<Plant, 'guideKey' | 'species'>, hours: number[]): Record<number, Light> {
+export function wants(p: Pick<Plant, 'guideKey' | 'species' | 'place'>, hours: number[]): Record<number, Light> {
   const g = guideFor(p.guideKey, p.species);
-  return Object.fromEntries(hours.map((h) => [h, wantAt(g, h)]));
+  return Object.fromEntries(hours.map((h) => [h, wantAt(g, h, p.place)]));
 }
 
 /** True when the plant wants sun, but not in the middle of the day. */
@@ -119,7 +141,7 @@ export function mismatches(p: Plant, hours: number[]): { from: number; to: numbe
   const out: { from: number; to: number; gets: Light; want: Light }[] = [];
   for (const h of hours) {
     const gets = p.sun?.[h];
-    const want = wantAt(g, h);
+    const want = wantAt(g, h, p.place);
     if (!gets || gets === want) continue;
     const last = out[out.length - 1];
     if (last && last.to === h && last.gets === gets && last.want === want) last.to = h + 1;

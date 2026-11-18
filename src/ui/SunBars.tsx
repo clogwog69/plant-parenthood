@@ -1,13 +1,11 @@
 import { Check, Eraser, Sun, Thermometer } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { plantName } from '../lib/care';
-import { clock, daylight, hotDay, hourLabel, LIGHT_LABEL, LIGHTS, MIDDAY, mismatches, needsMiddayShade, runs, wants, type Light } from '../lib/sun';
+import { clock, daylight, hotDay, hourLabel, lightName, lightShort, lightsFor, MIDDAY, mismatches, needsMiddayShade, runs, wants, type Light } from '../lib/sun';
 import type { Plant } from '../lib/types';
 import { useStore } from '../store';
 
 const span = (from: number, to: number) => `${hourLabel(from)}–${hourLabel(to)}`;
-const SAY: Record<Light, string> = { full: 'full sun', shade: 'shade', bright: 'bright light out of the sun', low: 'low light' };
-const lower = (l: Light) => SAY[l];
 
 function Bar({ hours, at, label }: { hours: number[]; at: (h: number) => Light | undefined; label: string }) {
   return (
@@ -30,9 +28,10 @@ export function SunBars({ plant }: { plant: Plant }) {
   const { location, weather, setSun } = useStore();
   const day = useMemo(() => daylight(location), [location]);
   const { hours } = day;
-  const want = useMemo(() => wants(plant, hours), [plant.guideKey, plant.species, hours]); // eslint-disable-line react-hooks/exhaustive-deps
+  const want = useMemo(() => wants(plant, hours), [plant.guideKey, plant.species, plant.place, hours]); // eslint-disable-line react-hooks/exhaustive-deps
   const [editing, setEditing] = useState(false);
   const [brush, setBrush] = useState<Light | 'clear'>('full');
+  useEffect(() => setBrush('full'), [plant.place]);
   const [draft, setDraft] = useState<Record<number, Light>>(plant.sun ?? {});
   const painting = useRef(false);
   const draftRef = useRef(draft);
@@ -49,6 +48,10 @@ export function SunBars({ plant }: { plant: Plant }) {
   const shadedAtMidday = MIDDAY.every((h) => gets[h] && gets[h] !== 'full');
   const name = plantName(plant);
   const wantRuns = runs(hours, (h) => want[h]);
+  const where = plant.place;
+  const L = (l: Light) => lightName(l, where);
+  const lower = (l: Light) => L(l).charAt(0).toLowerCase() + L(l).slice(1);
+  const swatches = lightsFor(where);
 
   const paintAt = (x: number) => {
     const r = barRef.current?.getBoundingClientRect();
@@ -80,13 +83,13 @@ export function SunBars({ plant }: { plant: Plant }) {
         <span>{day.set ? `Sunset ${clock(day.set)}` : 'Evening'}</span>
       </div>
 
-      <h3 className="sun-title">What it needs</h3>
-      <Bar hours={hours} at={(h) => want[h]} label={wantRuns.map((r) => `${span(r.from, r.to)} ${LIGHT_LABEL[r.light]}`).join(', ')} />
+      <h3 className="sun-title">What it needs {where === 'indoor' ? 'indoors' : 'outside'}</h3>
+      <Bar hours={hours} at={(h) => want[h]} label={wantRuns.map((r) => `${span(r.from, r.to)} ${L(r.light)}`).join(', ')} />
       <Ticks hours={hours} />
       <p className="sun-say">
         {wantRuns.length === 1
-          ? `${LIGHT_LABEL[wantRuns[0].light]} all day.`
-          : wantRuns.map((r) => `${LIGHT_LABEL[r.light]} ${span(r.from, r.to)}`).join(', then ') + '.'}
+          ? `${L(wantRuns[0].light)} all day.`
+          : wantRuns.map((r) => `${L(r.light)} ${span(r.from, r.to)}`).join(', then ') + '.'}
       </p>
 
       <h3 className="sun-title">What it gets {!editing && <button type="button" className="link-btn" onClick={() => { setDraft(plant.sun ?? {}); setEditing(true); }}>{marked ? 'Change' : 'Mark it'}</button>}</h3>
@@ -99,7 +102,7 @@ export function SunBars({ plant }: { plant: Plant }) {
         onPointerUp={() => { if (painting.current) { painting.current = false; save(draftRef.current); } }}
         onPointerCancel={() => { painting.current = false; }}
       >
-        <Bar hours={hours} at={(h) => gets[h]} label={marked ? runs(hours, (h) => gets[h]).map((r) => `${span(r.from, r.to)} ${LIGHT_LABEL[r.light]}`).join(', ') : 'Not marked yet'} />
+        <Bar hours={hours} at={(h) => gets[h]} label={marked ? runs(hours, (h) => gets[h]).map((r) => `${span(r.from, r.to)} ${L(r.light)}`).join(', ') : 'Not marked yet'} />
       </div>
       <Ticks hours={hours} />
 
@@ -107,9 +110,9 @@ export function SunBars({ plant }: { plant: Plant }) {
         <div className="sun-tools">
           <p className="muted small">Pick a colour, then tap or slide along the hours.</p>
           <div className="sun-swatches" role="radiogroup" aria-label="Colour">
-            {LIGHTS.map((l) => (
+            {swatches.map((l) => (
               <button key={l.value} type="button" role="radio" aria-checked={brush === l.value} className={'swatch' + (brush === l.value ? ' on' : '')} onClick={() => setBrush(l.value)}>
-                <span className={'dot l-' + l.value} /> {l.short}
+                <span className={'dot l-' + l.value} /> {lightShort(l.value, where)}
               </button>
             ))}
             <button type="button" role="radio" aria-checked={brush === 'clear'} className={'swatch' + (brush === 'clear' ? ' on' : '')} onClick={() => setBrush('clear')}>
@@ -138,7 +141,7 @@ export function SunBars({ plant }: { plant: Plant }) {
       )}
 
       <div className="sun-key">
-        {LIGHTS.map((l) => <span key={l.value}><i className={'dot l-' + l.value} /> {l.label}</span>)}
+        {swatches.map((l) => <span key={l.value}><i className={'dot l-' + l.value} /> {L(l.value)}</span>)}
       </div>
     </div>
   );

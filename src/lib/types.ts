@@ -127,7 +127,7 @@ export interface Plant {
   /** How much sun it actually gets, by clock hour (6 = 6am to 7am), as the household marked it. */
   sun?: Record<number, 'full' | 'shade' | 'bright' | 'low'>;
   /** The stage it was at, and when that was said. It grows up from there. */
-  age?: { stage: Stage; at: number };
+  age?: { stage: Stage; at: number; fromPhoto?: boolean };
   thumb?: string;
   photoId?: string;
   lastWatered?: number;

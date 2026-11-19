@@ -2,8 +2,9 @@ import { Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { CATEGORY_LABEL, guideFor, searchGuides, type Match } from '../lib/guide';
 import type { Place, Plant, Stage } from '../lib/types';
-import { stageOf } from '../lib/age';
-import { useStore } from '../store';
+import { isStage, stageOf, STAGE_LABEL } from '../lib/age';
+import { aiAvailable, aiMessage, runAI, type Identified } from '../lib/ai';
+import { usePhoto, useStore } from '../store';
 import { AgePicker } from '../ui/AgePicker';
 import { Segmented, Sheet } from '../ui/bits';
 
@@ -15,6 +16,20 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
   const [nickname, setNickname] = useState(plant.nickname ?? '');
   const was = stageOf(plant);
   const [stage, setStage] = useState<Stage | null>(was);
+  const [guessed, setGuessed] = useState<Stage | null>(plant.age?.fromPhoto ? was : null);
+  const [guessing, setGuessing] = useState(false);
+  const [ageNote, setAgeNote] = useState('');
+  const latest = usePhoto(plant.checkins.find((c) => c.photoId)?.photoId ?? plant.photoId);
+  const guess = async () => {
+    if (!latest) return;
+    setGuessing(true); setAgeNote('');
+    try {
+      const r = await runAI<Identified>('identify', {}, latest);
+      if (isStage(r.stage)) { setStage(r.stage); setGuessed(r.stage); setAgeNote(`It looks like ${r.stage === 'seed' ? 'seeds just sown' : `a ${STAGE_LABEL[r.stage].toLowerCase()}`}. Tap Save changes to keep it.`); }
+      else setAgeNote('Could not tell from that photo. Pick the closest one yourself.');
+    } catch (e) { setAgeNote(aiMessage(e)); }
+    setGuessing(false);
+  };
   const [kind, setKind] = useState<Match | null>(null);
   const [changing, setChanging] = useState(false);
   const [query, setQuery] = useState('');
@@ -27,7 +42,7 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
       potted: place === 'indoor' || potted === 'pot',
       nickname,
       // Only restart the clock when the stage was changed, so it keeps growing up.
-      ...(stage !== was ? { age: stage ? { stage, at: Date.now() } : undefined } : {}),
+      ...(stage !== was ? { age: stage ? { stage, at: Date.now(), ...(stage === guessed ? { fromPhoto: true } : {}) } : undefined } : {}),
       ...(kind ? { guideKey: kind.guide.key, species: kind.label } : {}),
     });
     onClose();
@@ -43,7 +58,7 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
         )}
       </section>
 
-      <AgePicker value={stage} onChange={setStage} />
+      <AgePicker value={stage} onChange={setStage} guessed={guessed} onGuess={latest && aiAvailable() ? guess : undefined} guessing={guessing} note={ageNote} />
 
       <section className="group">
         <h2>Nickname <span className="optional">optional</span></h2>

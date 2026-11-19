@@ -7,6 +7,7 @@ import { CATEGORY_LABEL, GUIDES, findByLatin, findByName, searchGuides, type Mat
 import type { Shot } from '../lib/photo';
 import type { Category, Place, Stage, TagInfo } from '../lib/types';
 import { AgePicker } from '../ui/AgePicker';
+import { isStage } from '../lib/age';
 import { useStore } from '../store';
 import { PhotoButton, PhotoPicker, Segmented } from '../ui/bits';
 import { TAG_FIELDS } from './PlantDetail';
@@ -28,6 +29,7 @@ export function AddPlant() {
   const [nickname, setNickname] = useState('');
   const [watered, setWatered] = useState<Watered>('unsure');
   const [stage, setStage] = useState<Stage | null>(null);
+  const [guessed, setGuessed] = useState<Stage | null>(null);
 
   const matches = useMemo(() => searchGuides(query), [query]);
   const name = query.trim();
@@ -53,6 +55,7 @@ export function AddPlant() {
     try {
       const r = await runAI<Identified>('identify', {}, shot.full);
       const found = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';
+      if (stage === null && isStage(r.stage)) { setStage(r.stage); setGuessed(r.stage); }
       if (!found) setAiNote('Could not tell what that is. Try a clearer photo, or type the name.');
       else {
         suggest(found, r.category, typeof r.careLike === 'string' ? r.careLike : undefined, typeof r.latin === 'string' ? r.latin : undefined);
@@ -98,6 +101,7 @@ export function AddPlant() {
       shot,
       tag,
       stage,
+      stageFromPhoto: !!stage && stage === guessed,
     });
     window.history.replaceState(null, '', '#/plants');
     go(`/plant/${plant.id}`);
@@ -180,7 +184,7 @@ export function AddPlant() {
         )}
       </section>
 
-      <AgePicker value={stage} onChange={setStage} />
+      <AgePicker value={stage} onChange={setStage} guessed={guessed} />
 
       <section className="group">
         <h2>When was it last watered?</h2>

@@ -42,3 +42,17 @@ export const WATER_WHY: Record<Stage, string> = {
   young: 'It is still young with small roots, so it needs water more often than a grown plant',
   grown: '',
 };
+
+const ORDER: Stage[] = ['seed', 'seedling', 'young', 'grown'];
+export const isStage = (s: unknown): s is Stage => ORDER.includes(s as Stage);
+
+/**
+ * What a photo says about its age. Fills it in when nobody has said, and moves it on when it has grown
+ * faster than the app guessed. Never makes it younger: plants do not shrink, and a bad photo should not undo it.
+ */
+export function ageFromPhoto(p: Pick<Plant, 'age' | 'createdAt'>, seen: unknown, now = Date.now()): Plant['age'] | null {
+  if (!isStage(seen)) return null;
+  const cur = stageOf(p, now);
+  if (cur && ORDER.indexOf(seen) <= ORDER.indexOf(cur)) return null;
+  return { stage: seen, at: now, fromPhoto: true };
+}

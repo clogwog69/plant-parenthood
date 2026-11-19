@@ -1,7 +1,8 @@
-import { Check, ChevronLeft, Droplet, ScanSearch, Scissors, Shovel, Smile, Sparkles, Timer } from 'lucide-react';
+import { Check, ChevronLeft, Droplet, ScanSearch, Scissors, Shovel, Smile, Sparkles, Sprout, Timer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { back, go } from '../App';
 import { aiMessage, runAI, type Diagnosis } from '../lib/ai';
+import { ageFromPhoto, STAGE_LABEL } from '../lib/age';
 import { ago, dayDiff, plantName, seasonFor } from '../lib/care';
 import { SIGNS, SIGN_LABEL } from '../lib/checkin';
 import { CATEGORY_LABEL, guideFor } from '../lib/guide';
@@ -30,6 +31,7 @@ export function CheckinScreen({ id }: { id: string }) {
   const [note, setNote] = useState('');
   const [made, setResult] = useState<Checkin | null>(null);
   const [looking, setLooking] = useState<'working' | 'done' | string | null>(null);
+  const [grew, setGrew] = useState<string | null>(null);
 
   useEffect(() => { if (!plant) go('/plants'); }, [plant]);
   if (!plant) return null;
@@ -55,7 +57,11 @@ export function CheckinScreen({ id }: { id: string }) {
       noticed: signs.map((s) => SIGN_LABEL[s]),
       note: note.trim().slice(0, 300) || undefined,
     }, shot.full)
-      .then((dx) => { diagnose(plant.id, c.id, dx); setLooking('done'); })
+      .then((dx) => {
+        const age = ageFromPhoto(plant, dx.stage);
+        if (age) setGrew(plant.age ? `It looks like a ${STAGE_LABEL[age.stage].toLowerCase()} now, so its watering and feeding have been updated.` : `It looks like ${age.stage === 'seed' ? 'seeds just sown' : `a ${STAGE_LABEL[age.stage].toLowerCase()}`}, so its care is set for that. Change it on the plant page if that is wrong.`);
+        diagnose(plant.id, c.id, dx); setLooking('done');
+      })
       .catch((e) => setLooking(aiMessage(e)));
   };
   const lastThumb = last?.thumb ?? (result ? undefined : plant.thumb);
@@ -76,6 +82,7 @@ export function CheckinScreen({ id }: { id: string }) {
         {result.summary && (
           <div className="looking done"><ScanSearch size={20} /><div><b>{HEALTH[result.health ?? 'good']}</b><p>{result.summary}</p></div></div>
         )}
+        {grew && <div className="looking done"><Sprout size={20} /><div><b>Age</b><p>{grew}</p></div></div>}
         <ul className="advice">
           {result.advice.map((a, i) => (
             <li key={i} className={`kind-${a.kind}`}>

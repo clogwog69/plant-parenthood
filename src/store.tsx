@@ -1,3 +1,4 @@
+import { ageFromPhoto } from './lib/age';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Diagnosis } from './lib/ai';
 import { digest, plantName } from './lib/care';
@@ -23,6 +24,7 @@ export interface NewPlant {
   shot?: Shot;
   tag?: TagInfo;
   stage?: Stage | null;
+  stageFromPhoto?: boolean;
 }
 
 interface Store {
@@ -308,7 +310,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           id, guideKey: n.guideKey, species: n.species, nickname: n.nickname || undefined,
           place: n.place, potted: n.potted, createdAt: now, updatedAt: now,
           thumb: n.shot?.thumb, photoId, lastWatered: n.lastWatered, tag: n.tag,
-          age: n.stage ? { stage: n.stage, at: now } : undefined,
+          age: n.stage ? { stage: n.stage, at: now, ...(n.stageFromPhoto ? { fromPhoto: true } : {}) } : undefined,
           firstPhoto: n.shot && photoId ? { photoId, thumb: n.shot.thumb, date: now } : undefined,
           todos: [], checkins: [], events: [{ type: 'added', date: now, by: who() }],
         };
@@ -402,6 +404,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const health = dx.health === 'poor' || dx.health === 'watch' ? dx.health : 'good';
         patch(id, (p) => ({
           ...applyAdvice(p, found, uid),
+          age: ageFromPhoto(p, dx.stage) ?? p.age,
           checkins: p.checkins.map((c) => (c.id !== checkinId ? c : {
             ...c,
             summary: text(dx.summary, 300) || undefined,

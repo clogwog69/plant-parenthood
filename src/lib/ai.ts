@@ -2,7 +2,7 @@
 // (running on a home computer, see helper/helper.mjs) answers them.
 import * as remote from './sync';
 import type { House } from './sync';
-import type { Category } from './types';
+import type { Category, Stage } from './types';
 
 export type AIKind = 'identify' | 'tag' | 'diagnose' | 'ask';
 
@@ -13,6 +13,7 @@ export interface Identified {
   /** Key of the known plant whose care is closest. */
   careLike?: string;
   confidence?: 'high' | 'medium' | 'low';
+  stage?: Stage;
 }
 export interface TagRead {
   name?: string;
@@ -31,6 +32,7 @@ export interface Diagnosis {
   summary: string;
   health: 'good' | 'watch' | 'poor';
   findings: Finding[];
+  stage?: Stage;
 }
 export interface Answer {
   answer: string;

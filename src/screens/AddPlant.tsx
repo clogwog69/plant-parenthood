@@ -5,7 +5,8 @@ import { aiMessage, runAI, type Identified, type TagRead } from '../lib/ai';
 import { DAY, placement } from '../lib/care';
 import { CATEGORY_LABEL, GUIDES, findByLatin, findByName, searchGuides, type Match } from '../lib/guide';
 import type { Shot } from '../lib/photo';
-import type { Category, Place, TagInfo } from '../lib/types';
+import type { Category, Place, Stage, TagInfo } from '../lib/types';
+import { AgePicker } from '../ui/AgePicker';
 import { useStore } from '../store';
 import { PhotoButton, PhotoPicker, Segmented } from '../ui/bits';
 import { TAG_FIELDS } from './PlantDetail';
@@ -26,6 +27,7 @@ export function AddPlant() {
   const [potted, setPotted] = useState<'pot' | 'ground'>('pot');
   const [nickname, setNickname] = useState('');
   const [watered, setWatered] = useState<Watered>('unsure');
+  const [stage, setStage] = useState<Stage | null>(null);
 
   const matches = useMemo(() => searchGuides(query), [query]);
   const name = query.trim();
@@ -95,6 +97,7 @@ export function AddPlant() {
       lastWatered,
       shot,
       tag,
+      stage,
     });
     window.history.replaceState(null, '', '#/plants');
     go(`/plant/${plant.id}`);
@@ -176,6 +179,8 @@ export function AddPlant() {
           </div>
         )}
       </section>
+
+      <AgePicker value={stage} onChange={setStage} />
 
       <section className="group">
         <h2>When was it last watered?</h2>

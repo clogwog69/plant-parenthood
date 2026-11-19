@@ -1,4 +1,6 @@
 export type Place = 'garden' | 'indoor';
+/** How grown-up a plant is. */
+export type Stage = 'seed' | 'seedling' | 'young' | 'grown';
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 export type Category =
   | 'herb'
@@ -124,6 +126,8 @@ export interface Plant {
   updatedAt?: number;
   /** How much sun it actually gets, by clock hour (6 = 6am to 7am), as the household marked it. */
   sun?: Record<number, 'full' | 'shade' | 'bright' | 'low'>;
+  /** The stage it was at, and when that was said. It grows up from there. */
+  age?: { stage: Stage; at: number };
   thumb?: string;
   photoId?: string;
   lastWatered?: number;

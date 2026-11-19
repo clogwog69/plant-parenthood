@@ -1,8 +1,10 @@
 import { Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { CATEGORY_LABEL, guideFor, searchGuides, type Match } from '../lib/guide';
-import type { Place, Plant } from '../lib/types';
+import type { Place, Plant, Stage } from '../lib/types';
+import { stageOf } from '../lib/age';
 import { useStore } from '../store';
+import { AgePicker } from '../ui/AgePicker';
 import { Segmented, Sheet } from '../ui/bits';
 
 /** Move a plant indoors or out, into the ground, rename it, or fix what it is. */
@@ -11,6 +13,8 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
   const [place, setPlace] = useState<Place>(plant.place);
   const [potted, setPotted] = useState<'pot' | 'ground'>(plant.potted ? 'pot' : 'ground');
   const [nickname, setNickname] = useState(plant.nickname ?? '');
+  const was = stageOf(plant);
+  const [stage, setStage] = useState<Stage | null>(was);
   const [kind, setKind] = useState<Match | null>(null);
   const [changing, setChanging] = useState(false);
   const [query, setQuery] = useState('');
@@ -22,6 +26,8 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
       place,
       potted: place === 'indoor' || potted === 'pot',
       nickname,
+      // Only restart the clock when the stage was changed, so it keeps growing up.
+      ...(stage !== was ? { age: stage ? { stage, at: Date.now() } : undefined } : {}),
       ...(kind ? { guideKey: kind.guide.key, species: kind.label } : {}),
     });
     onClose();
@@ -36,6 +42,8 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
           <Segmented value={potted} onChange={setPotted} options={[{ value: 'pot', label: 'In a pot' }, { value: 'ground', label: 'In the ground' }]} />
         )}
       </section>
+
+      <AgePicker value={stage} onChange={setStage} />
 
       <section className="group">
         <h2>Nickname <span className="optional">optional</span></h2>

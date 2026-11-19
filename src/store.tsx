@@ -7,7 +7,7 @@ import type { Shot } from './lib/photo';
 import { notifyHouse, type PushKind } from './lib/push';
 import * as remote from './lib/sync';
 import type { House } from './lib/sync';
-import type { Advice, AdviceKind, Checkin, EventType, Location, Photo, Place, Plant, Sign, TagInfo, Weather } from './lib/types';
+import type { Advice, AdviceKind, Checkin, EventType, Location, Photo, Place, Plant, Sign, TagInfo, Weather, Stage } from './lib/types';
 import { getWeather } from './lib/weather';
 
 export type View = 'grid' | 'list';
@@ -22,6 +22,7 @@ export interface NewPlant {
   lastWatered?: number;
   shot?: Shot;
   tag?: TagInfo;
+  stage?: Stage | null;
 }
 
 interface Store {
@@ -47,7 +48,7 @@ interface Store {
   addPhoto(id: string, shot: Shot): void;
   setTag(id: string, tag: TagInfo | undefined): void;
   /** Change what it is, where it lives or its nickname. */
-  editPlant(id: string, changes: Partial<Pick<Plant, 'guideKey' | 'species' | 'nickname' | 'place' | 'potted'>>): void;
+  editPlant(id: string, changes: Partial<Pick<Plant, 'guideKey' | 'species' | 'nickname' | 'place' | 'potted' | 'age'>>): void;
   /** Save how much sun it gets through the day. Empty clears it. */
   setSun(id: string, sun: Plant['sun']): void;
   /** Fold what the photo diagnosis found into a check-in. */
@@ -307,6 +308,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           id, guideKey: n.guideKey, species: n.species, nickname: n.nickname || undefined,
           place: n.place, potted: n.potted, createdAt: now, updatedAt: now,
           thumb: n.shot?.thumb, photoId, lastWatered: n.lastWatered, tag: n.tag,
+          age: n.stage ? { stage: n.stage, at: now } : undefined,
           firstPhoto: n.shot && photoId ? { photoId, thumb: n.shot.thumb, date: now } : undefined,
           todos: [], checkins: [], events: [{ type: 'added', date: now, by: who() }],
         };

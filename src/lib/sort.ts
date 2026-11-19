@@ -1,5 +1,6 @@
 // Ordering the plant list: by name, age, or by when each job is next due.
 import { DAY, dayDiff, dueLabel, feedPlan, plantName, repotStatus, seasonFor, waterPlan } from './care';
+import { bornAt } from './age';
 import { guideFor } from './guide';
 import type { Category, Location, Plant, Season, Weather } from './types';
 
@@ -67,8 +68,8 @@ export function dueFor(key: SortKey, p: Plant, weather: Weather | null, loc: Loc
   switch (key) {
     case 'az': return null;
     case 'age': {
-      const days = dayDiff(now, p.createdAt);
-      const label = days < 1 ? 'Added today' : days < 60 ? `${days} day${days === 1 ? '' : 's'} old` : days < 730 ? `${Math.round(days / 30.4)} months old` : `${Math.floor(days / 365)} years old`;
+      const days = dayDiff(now, bornAt(p, now));
+      const label = days < 1 ? (p.age ? 'Sown today' : 'Added today') : days < 60 ? `${days} day${days === 1 ? '' : 's'} old` : days < 730 ? `${Math.round(days / 30.4)} months old` : `${Math.floor(days / 365)} years old`;
       return { dueIn: -days, label, urgent: false };
     }
     case 'water': {

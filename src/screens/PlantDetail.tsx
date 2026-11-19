@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { back, go } from '../App';
 import { aiMessage, runAI, type Answer, type TagRead } from '../lib/ai';
 import { ago, dayDiff, dueLabel, feedPlan, placement, plantName, repotStatus, seasonFor, tasksFor, waterPlan } from '../lib/care';
+import { ageDays, STAGE_LABEL, stageOf } from '../lib/age';
 import { SIGN_LABEL } from '../lib/checkin';
 import { CATEGORY_LABEL, guideFor } from '../lib/guide';
 import type { EventType, Plant, TagInfo } from '../lib/types';
@@ -83,6 +84,8 @@ export function PlantDetail({ id }: { id: string }) {
   const jobs = tasksFor(plant, weather, location).filter((t) => t.kind !== 'water' && t.dueIn <= 0);
   const inSeason = g.harvest && (!g.harvest.seasons || g.harvest.seasons.includes(season));
   const frames = framesOf(plant);
+  const stage = stageOf(plant);
+  const baby = stage === 'seed' || stage === 'seedling';
 
   const journal = [
     ...plant.checkins.map((c) => ({ date: c.date, checkin: c, event: null as EventType | null, by: c.by })),
@@ -100,6 +103,7 @@ export function PlantDetail({ id }: { id: string }) {
     plant: plant.species, latin: g.latin, type: CATEGORY_LABEL[g.category],
     lives: `${plant.place === 'garden' ? 'outdoors' : 'indoors'}, ${plant.potted ? 'in a pot' : 'in the ground'}`,
     season, town: location?.name,
+    age: stage ? `${STAGE_LABEL[stage].toLowerCase()}, about ${Math.round(ageDays(plant)!)} days old` : undefined,
     lastWatered: plant.lastWatered ? ago(plant.lastWatered) : 'unknown',
     inThisPotSince: plant.potted ? dated(plant.lastRepotted ?? plant.createdAt) : undefined,
   });
@@ -144,6 +148,7 @@ export function PlantDetail({ id }: { id: string }) {
           <span>{plant.place === 'garden' ? 'Garden' : 'Indoors'}</span>
           <span>{plant.potted ? 'In a pot' : 'In the ground'}</span>
           <span>{CATEGORY_LABEL[g.category]}</span>
+          {stage && stage !== 'grown' && <span className="tag-young">{STAGE_LABEL[stage]}</span>}
         </p>
         <button type="button" className="link" onClick={() => setEditing(true)}>Moved it? Change where it lives</button>
       </header>
@@ -224,7 +229,7 @@ export function PlantDetail({ id }: { id: string }) {
             <dd>
               {feed.what}
               <small>{feed.note}{plant.lastFed ? ` Last fed ${ago(plant.lastFed).toLowerCase()}.` : ''}</small>
-              <button type="button" className="link" onClick={() => log(plant.id, 'fed')}>I fed it today</button>
+              {!baby && <button type="button" className="link" onClick={() => log(plant.id, 'fed')}>I fed it today</button>}
             </dd>
           </div>
           {g.harvest && (
@@ -232,8 +237,9 @@ export function PlantDetail({ id }: { id: string }) {
               <dt><Scissors size={16} /> Harvest</dt>
               <dd>
                 {g.harvest.how}
-                {!inSeason && g.harvest.seasons && <small>Usually ready in {g.harvest.seasons.join(' and ')}.</small>}
-                {inSeason && <button type="button" className="link" onClick={() => log(plant.id, 'harvested')}>I picked some today</button>}
+                {baby && <small>Let it grow up a bit first. Picking a seedling stunts it.</small>}
+                {!baby && !inSeason && g.harvest.seasons && <small>Usually ready in {g.harvest.seasons.join(' and ')}.</small>}
+                {!baby && inSeason && <button type="button" className="link" onClick={() => log(plant.id, 'harvested')}>I picked some today</button>}
               </dd>
             </div>
           )}

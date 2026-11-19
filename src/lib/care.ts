@@ -1,4 +1,5 @@
 import { guideFor } from './guide';
+import { stageOf, WATER_FACTOR, WATER_WHY } from './age';
 import { hotDay, middaySunburn } from './sun';
 import type { Category, Location, Plant, Season, Task, Weather } from './types';
 
@@ -75,6 +76,11 @@ export function waterPlan(plant: Plant, weather: Weather | null, loc: Location |
     if (season === 'winter') { factor = 1.5; why = 'Winter slows growth, so it needs less water'; }
   }
   if (outdoor && plant.potted) factor *= 0.75;
+  const stage = stageOf(plant, now);
+  if (stage && stage !== 'grown') {
+    factor *= WATER_FACTOR[stage];
+    why = why ? `${WATER_WHY[stage]}. ${why}` : WATER_WHY[stage];
+  }
 
   const every = clamp(Math.round(g.waterDays * factor), 1, 45);
   const base = `About every ${every === 1 ? 'day' : `${every} days`} right now`;
@@ -172,12 +178,17 @@ export function feedPlan(plant: Plant, loc: Location | null, now = Date.now()): 
   const last = plant.lastFed ?? plant.createdAt + 14 * DAY - every;
   const dueIn = Math.max(0, dayDiff(last + every, now));
   const rhythm = `every ${f.weeks === 1 ? 'week' : `${f.weeks} weeks`}`;
+  const stage = stageOf(plant, now);
+  if (stage === 'seed' || stage === 'seedling') {
+    return { inSeason: false, dueIn, weeks: f.weeks, what: f.what, note: 'No feeding yet. Seedlings burn easily, and the potting mix has all they need. Start once it has a few sets of proper leaves.' };
+  }
+  const what = stage === 'young' ? `Keep it gentle while it is young: half the usual strength. ${f.what}` : f.what;
   const note = !inSeason
     ? `No feeding until ${f.seasons[0]}. It is resting, and fertiliser now just builds up in the soil.`
     : dueIn <= 0
       ? `Time for a feed. It likes one ${rhythm} while it is growing.`
       : `Next feed ${dueLabel(dueIn).toLowerCase()}, then ${rhythm} while it is growing.`;
-  return { inSeason, dueIn, weeks: f.weeks, what: f.what, note };
+  return { inSeason, dueIn, weeks: f.weeks, what, note };
 }
 
 export interface Spot {
@@ -247,7 +258,9 @@ export function tasksFor(plant: Plant, weather: Weather | null, loc: Location | 
   }
 
   const h = g.harvest;
-  if (h && (!h.seasons || h.seasons.includes(season)) && !plant.todos.some((t) => t.kind === 'harvest')) {
+  const stage = stageOf(plant, now);
+  // Picking a baby stunts it. Let it grow first.
+  if (h && stage !== 'seed' && stage !== 'seedling' && (!h.seasons || h.seasons.includes(season)) && !plant.todos.some((t) => t.kind === 'harvest')) {
     const dueIn = dayDiff((plant.lastHarvested ?? plant.createdAt) + 7 * DAY, now);
     tasks.push({
       id: `${plant.id}:harvest`, plantId: plant.id, kind: 'harvest',

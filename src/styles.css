@@ -208,6 +208,7 @@ h1 { font: 600 32px/1.1 var(--serif); letter-spacing: -0.02em; }
 .detail-head p { color: var(--muted); margin-top: 4px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px !important; }
 .tags span { font-size: 13px; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; background: var(--card); color: var(--ink); }
+.tags span.tag-young { background: #e6f4dc; border-color: #b9dca1; color: #2f5d1a; font-weight: 600; }
 .next { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 .next.due { background: var(--water-soft); border-color: transparent; }
 .next-top { display: flex; gap: 12px; }

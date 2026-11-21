@@ -1,7 +1,7 @@
 import { guideFor } from './guide';
 import { stageOf, WATER_FACTOR, WATER_WHY } from './age';
 import { hotDay, middaySunburn } from './sun';
-import type { Category, Location, Plant, Season, Task, Weather } from './types';
+import type { Category, Guide, Location, Plant, Season, Task, Weather } from './types';
 
 export const DAY = 86_400_000;
 
@@ -170,7 +170,28 @@ const FEED: Record<Category, { weeks: number; seasons: Season[]; what: string }>
   shrub: { weeks: 12, seasons: GROW, what: 'Slow-release granules scattered under the canopy and watered in.' },
 };
 
+type FeedRule = { weeks: number; seasons: Season[]; what: string; never?: boolean };
+// Kinds that break the rule for their type.
+const CARNIVORE = /flytrap|pitcher|sundew|butterwort|sarracenia|nepenthes|drosera/;
+const LOW_P = /banksia|grevillea|waratah|hakea|protea|leucadendron|pincushion|dryandra|isopogon|leucospermum|boronia/;
+const NATIVE = /wattle|acacia|bottlebrush|callistemon|correa|westringia|eremophila|kangaroo-paw|lomandra|dianella|geraldton|flannel|kangaroo-grass/;
+const ORCHID = /orchid|cymbidium|dendrobium|oncidium|zygopetalum|cattleya|vanda|phalaenopsis/;
+const BULB = /tulip|hyacinth|daffodil|jonquil|narcissus|freesia|crocus|ranunculus|anemone|snowdrop|bluebell/;
+
+/** How and when this kind of plant is fed. */
+export function feedRule(g: Guide): FeedRule {
+  const id = `${g.key} ${g.name}`.toLowerCase();
+  if (CARNIVORE.test(id)) return { weeks: 52, seasons: [], never: true, what: 'Never fertilise it. It catches its own food, and fertiliser burns its roots. Water with rainwater only.' };
+  if (LOW_P.test(id)) return { weeks: 26, seasons: ['spring', 'autumn'], what: 'Only a low-phosphorus native fertiliser, lightly, in early spring and again in autumn. Normal fertiliser can kill it.' };
+  if (NATIVE.test(id)) return { weeks: 26, seasons: ['spring', 'autumn'], what: 'A light scatter of slow-release native fertiliser in spring and autumn. Natives need very little.' };
+  if (ORCHID.test(id)) return { weeks: 2, seasons: GROW, what: 'Orchid food at half strength every second watering. Water it through with plain water once a month to wash out salts.' };
+  if (BULB.test(id)) return { weeks: 3, seasons: ['winter', 'spring'], what: 'Bulb or potash-rich food from when the shoots come up until the leaves turn yellow. Nothing while it is dormant.' };
+  return FEED[g.category];
+}
+
 export interface FeedPlan {
+  /** Some plants are never fed. */
+  never?: boolean;
   /** False outside the growing season, when feeding does more harm than good. */
   inSeason: boolean;
   dueIn: number;
@@ -179,9 +200,16 @@ export interface FeedPlan {
   note: string;
 }
 
+/** The next of these seasons to come round. */
+function nextOf(seasons: Season[], loc: Location | null, now: number): Season {
+  for (let d = 0; d < 370; d += 7) { const x = seasonFor(loc, now + d * DAY); if (seasons.includes(x)) return x; }
+  return seasons[0];
+}
+
 export function feedPlan(plant: Plant, loc: Location | null, now = Date.now()): FeedPlan {
   const g = guideFor(plant.guideKey, plant.species);
-  const f = FEED[g.category];
+  const f = feedRule(g);
+  if (f.never) return { never: true, inSeason: false, dueIn: Infinity, weeks: f.weeks, what: f.what, note: 'Nothing to do here, ever.' };
   const every = f.weeks * 7 * DAY;
   const inSeason = f.seasons.includes(seasonFor(loc, now));
   // Fresh potting mix carries a couple of weeks of food.
@@ -194,7 +222,7 @@ export function feedPlan(plant: Plant, loc: Location | null, now = Date.now()): 
   }
   const what = stage === 'young' ? `Keep it gentle while it is young: half the usual strength. ${f.what}` : f.what;
   const note = !inSeason
-    ? `No feeding until ${f.seasons[0]}. It is resting, and fertiliser now just builds up in the soil.`
+    ? `No feeding until ${nextOf(f.seasons, loc, now)}. It is resting, and fertiliser now just builds up in the soil.`
     : dueIn <= 0
       ? `Time for a feed. It likes one ${rhythm} while it is growing.`
       : `Next feed ${dueLabel(dueIn).toLowerCase()}, then ${rhythm} while it is growing.`;
@@ -340,7 +368,7 @@ export function alertsFor(plants: Plant[], weather: Weather | null): Alert[] {
   const garden = plants.filter((p) => p.place === 'garden');
 
   const frost = soon.find((d) => d.tmin <= 2);
-  const tender = garden.filter((p) => guideFor(p.guideKey, p.species).frostTender);
+  const tender = garden.filter((p) => !p.covered && guideFor(p.guideKey, p.species).frostTender);
   if (frost && tender.length) {
     out.push({
       kind: 'frost',

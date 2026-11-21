@@ -229,8 +229,8 @@ export function PlantDetail({ id }: { id: string }) {
             <dt><Sprout size={16} /> Feed</dt>
             <dd>
               {feed.what}
-              <small>{feed.note}{plant.lastFed ? ` Last fed ${ago(plant.lastFed).toLowerCase()}.` : ''}</small>
-              {!baby && <button type="button" className="link" onClick={() => log(plant.id, 'fed')}>I fed it today</button>}
+              {!feed.never && <small>{feed.note}{plant.lastFed ? ` Last fed ${ago(plant.lastFed).toLowerCase()}.` : ''}</small>}
+              {!baby && !feed.never && <button type="button" className="link" onClick={() => log(plant.id, 'fed')}>I fed it today</button>}
             </dd>
           </div>
           {g.harvest && (

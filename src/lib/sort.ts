@@ -1,5 +1,5 @@
 // Ordering the plant list: by name, age, or by when each job is next due.
-import { DAY, dayDiff, dueLabel, feedPlan, plantName, repotStatus, seasonFor, waterPlan } from './care';
+import { DAY, dayDiff, dueLabel, feedPlan, feedRule, plantName, repotStatus, seasonFor, waterPlan } from './care';
 import { bornAt } from './age';
 import { guideFor } from './guide';
 import type { Category, Guide, Location, Plant, Season, Weather } from './types';
@@ -41,13 +41,32 @@ function due(dueIn: number, now = 'Now'): Due {
 // The usual time of year for each job. Plants differ, so this is the general rule for the type.
 const PRUNE: Record<Category, Season[]> = {
   herb: ['spring', 'summer'], // pinch the tips to keep it bushy
-  vegetable: ['summer'], // pinch out side shoots and dead leaves
+  vegetable: ['spring', 'summer'], // pinch out tomato side shoots while it grows
   fruit: ['winter'], // the main prune while dormant
   houseplant: ['spring'],
   succulent: ['spring'],
-  flower: ['summer'], // deadhead to keep flowers coming
-  shrub: ['winter'], // late winter, before new growth
+  flower: ['spring', 'summer'], // deadhead to keep flowers coming
+  shrub: ['winter'], // summer and autumn bloomers: late winter, before new growth
 };
+// Prune spring bloomers straight after they flower, or you cut off next year's buds.
+// Natives get a light tip prune after flowering. Citrus and tropical fruit are pruned after picking.
+const AFTER_FLOWERS = /camellia|azalea|rhododendron|wattle|acacia|grevillea|boronia|lilac|forsythia|spiraea|viburnum|correa|westringia|banksia|bottlebrush|callistemon|kangaroo|waratah|protea|leucadendron|geraldton|eremophila|hakea|isopogon|pincushion|dryandra|wisteria|weigela|deutzia|philadelphus|mock-orange|flowering-quince|japonica/;
+const HEDGE = /murraya|lilly|syzygium|buxus|\bbox\b|photinia|privet|conifer|cypress|lavender|rosemary/;
+const AFTER_PICKING: [RegExp, Season[]][] = [
+  [/citrus|lemon|lime|orange|mandarin|grapefruit|cumquat|kumquat|tangelo|yuzu/, ['spring']],
+  [/mango|lychee|longan|apricot|cherry/, ['summer']],
+  [/passionfruit|olive|feijoa/, ['spring']],
+];
+
+function pruneTime(g: Guide): { seasons: Season[]; now: string } {
+  const id = `${g.key} ${g.name}`.toLowerCase();
+  if (g.category === 'fruit') for (const [re, seasons] of AFTER_PICKING) if (re.test(id)) return { seasons, now: 'After picking' };
+  if (g.category === 'shrub' || g.category === 'flower') {
+    if (AFTER_FLOWERS.test(id)) return { seasons: ['spring'], now: 'After flowers' };
+    if (HEDGE.test(id)) return { seasons: ['spring', 'summer'], now: 'Light trim' };
+  }
+  return { seasons: PRUNE[g.category], now: 'Now' };
+}
 // Plenty of plants never need pruning: bulbs, palms, ferns, most houseplants, succulents and veg,
 // leafy herbs you just pick, and big trees. For a type, the rule is the usual case; these are the exceptions.
 const PRUNE_YES: Partial<Record<Category, RegExp>> = {
@@ -71,11 +90,6 @@ export function needsPruning(g: Guide): boolean {
   return !!PRUNE_YES[g.category]?.test(id);
 }
 
-// Matches the feeding seasons in care.ts.
-const FEED_SEASONS: Record<Category, Season[]> = {
-  herb: ['spring', 'summer', 'autumn'], vegetable: ['spring', 'summer', 'autumn'], fruit: ['spring', 'summer', 'autumn'],
-  flower: ['spring', 'summer', 'autumn'], houseplant: ['spring', 'summer'], succulent: ['spring', 'summer'], shrub: ['spring', 'summer'],
-};
 const PROPAGATE: Record<Category, Season[] | null> = {
   herb: ['spring', 'summer'],
   vegetable: null, // grown fresh from seed
@@ -102,8 +116,9 @@ export function dueFor(key: SortKey, p: Plant, weather: Weather | null, loc: Loc
     }
     case 'feed': {
       const f = feedPlan(p, loc, now);
+      if (f.never) return NEVER("Don't feed");
       if (!f.inSeason) {
-        const s = daysUntil(FEED_SEASONS[g.category], loc, now);
+        const s = daysUntil(feedRule(g).seasons, loc, now);
         return { ...due(s), label: s > 45 ? `From ${seasonFor(loc, now + s * DAY)}` : due(s).label };
       }
       return due(f.dueIn, 'Today');
@@ -127,29 +142,26 @@ export function dueFor(key: SortKey, p: Plant, weather: Weather | null, loc: Loc
     case 'prune': {
       if (p.todos.some((t) => t.kind === 'prune')) return due(0);
       if (!needsPruning(g)) return NEVER("Don't prune");
-      return due(daysUntil(PRUNE[g.category], loc, now));
+      const t = pruneTime(g);
+      return due(daysUntil(t.seasons, loc, now), t.now);
     }
     case 'propagate': {
       const s = PROPAGATE[g.category];
       if (!s) return NEVER('Grow from seed');
-      return due(daysUntil(s, loc, now));
+      // Only if you want more plants, so it is never a job that is due.
+      const d = daysUntil(s, loc, now);
+      return { ...due(d, 'Good time'), urgent: false };
     }
     case 'move': {
-      if (p.place === 'garden' && !p.potted) return NEVER('Stays put');
+      // Plants are happiest left where they are. Only frost or a heatwave in the next three days is a reason to move one.
+      if (p.place === 'indoor') return NEVER('Stays inside');
       const soon = weather ? weather.days.slice(Math.max(0, weather.days.findIndex((d) => d.date === weather.today))).slice(0, 3) : [];
-      if (p.place === 'garden') {
-        const hot = soon.findIndex((d) => d.tmax >= 36);
-        const frost = g.frostTender ? soon.findIndex((d) => d.tmin <= 2) : -1;
-        if (frost >= 0) return { dueIn: frost, label: frost === 0 ? 'Cover tonight' : 'Frost soon', urgent: true };
-        if (hot >= 0) return { dueIn: hot, label: hot === 0 ? 'Into shade' : 'Heat soon', urgent: true };
-        if (g.frostTender) {
-          const d = daysUntil(['winter'], loc, now);
-          return d === 0 ? { dueIn: 0, label: 'Under cover', urgent: true } : due(d);
-        }
-        return NEVER('Fine outside');
-      }
-      // Indoor plants enjoy a summer holiday outside in a shady spot.
-      return { ...due(daysUntil(['summer'], loc, now), 'Outside OK'), urgent: false };
+      const frost = g.frostTender && !p.covered ? soon.findIndex((d) => d.tmin <= 2) : -1;
+      if (frost >= 0) return { dueIn: frost, label: frost === 0 ? (p.potted ? 'Under cover tonight' : 'Cover tonight') : 'Frost soon', urgent: true };
+      if (!p.potted) return NEVER('Stays put');
+      const hot = soon.findIndex((d) => d.tmax >= 36);
+      if (hot >= 0) return { dueIn: hot, label: hot === 0 ? 'Into shade' : 'Heat soon', urgent: true };
+      return NEVER('Fine where it is');
     }
   }
 }

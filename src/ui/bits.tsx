@@ -1,4 +1,4 @@
-import { Bell, BellOff, Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, RefreshCw, Search, Share, Share2, Smartphone, Sun, X } from 'lucide-react';
+import { Plane, Bell, BellOff, Camera, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, ImagePlus, LocateFixed, RefreshCw, Search, Share, Share2, Smartphone, Sun, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { guideFor } from '../lib/guide';
@@ -158,7 +158,7 @@ function Notifications() {
 }
 
 /** Settings, reached from the cog on Today. */
-export function SettingsSheet({ onClose, onShare }: { onClose(): void; onShare(): void }) {
+export function SettingsSheet({ onClose, onShare, onSitters }: { onClose(): void; onShare(): void; onSitters?(): void }) {
   const { house, me } = useStore();
   return (
     <Sheet title="Settings" onClose={onClose}>
@@ -171,6 +171,12 @@ export function SettingsSheet({ onClose, onShare }: { onClose(): void; onShare()
             <button type="button" className="link" onClick={onShare}>Set up a household</button>
           </div>
         </div>
+      )}
+      {house && onSitters && (
+        <button type="button" className="doctor-card" onClick={onSitters}>
+          <span className="doctor-ico"><Plane size={22} /></span>
+          <span><b>Going away? Add a Bud-sitter</b><small>Give a friend the watering plan for the days you are gone.</small></span>
+        </button>
       )}
       {house && <p className="muted small">{me ? `You are ${me}, in ${house.name}. ` : ''}These choices are for this phone only. Everyone else picks their own.</p>}
     </Sheet>

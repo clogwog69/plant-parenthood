@@ -2,7 +2,7 @@
 import { DAY, dayDiff, dueLabel, feedPlan, plantName, repotStatus, seasonFor, waterPlan } from './care';
 import { bornAt } from './age';
 import { guideFor } from './guide';
-import type { Category, Location, Plant, Season, Weather } from './types';
+import type { Category, Guide, Location, Plant, Season, Weather } from './types';
 
 export type SortKey = 'az' | 'water' | 'age' | 'prune' | 'repot' | 'feed' | 'harvest' | 'propagate' | 'move';
 
@@ -48,6 +48,29 @@ const PRUNE: Record<Category, Season[]> = {
   flower: ['summer'], // deadhead to keep flowers coming
   shrub: ['winter'], // late winter, before new growth
 };
+// Plenty of plants never need pruning: bulbs, palms, ferns, most houseplants, succulents and veg,
+// leafy herbs you just pick, and big trees. For a type, the rule is the usual case; these are the exceptions.
+const PRUNE_YES: Partial<Record<Category, RegExp>> = {
+  houseplant: /ficus|fig\b|fiddle|rubber|croton|persian|pothos|tradescantia|coleus|schefflera|umbrella|dracaena|ivy|begonia|geranium|fuchsia|polka/,
+  vegetable: /tomato|tomatillo/,
+  succulent: /(?!)/,
+};
+const PRUNE_NO: Partial<Record<Category, RegExp>> = {
+  herb: /parsley|coriander|cilantro|chervil|dill|borage|chives|ginger|turmeric|cumin|caraway|angelica|cardamom|wasabi|horseradish|nasturtium|lovage|fennel|garlic|galangal/,
+  fruit: /strawberr|melon|pineapple|macadamia|avocado|jaboticaba|mangosteen|babaco|pumpkin|gooseberry/,
+  flower: /tulip|hyacinth|freesia|crocus|ranunculus|lily|tuberose|cyclamen|sunflower|foxglove|hollyhock|canterbury|violet|daffodil|jonquil|narcissus|iris|anemone|snowdrop|bluebell|gladiol|orchid|zygopetalum|bulb/,
+  shrub: /jarrah|gum|eucalypt|jacaranda|maple|firewheel|daphne|cycad|grass-tree|xanthorrhoea|magnolia|frangipani|bottle-tree|boab|kurrajong|she-oak|casuarina|tree-fern/,
+};
+const PRUNE_BY_DEFAULT: Record<Category, boolean> = { herb: true, vegetable: false, fruit: true, houseplant: false, succulent: false, flower: true, shrub: true };
+
+/** Whether this kind of plant is ever pruned. Picking herbs and deadheading count; tidying off a dead leaf does not. */
+export function needsPruning(g: Guide): boolean {
+  const id = `${g.key} ${g.name}`.toLowerCase();
+  if (/palm|\bfern\b|cactus|bromeliad|air-plant|tillandsia|moss/.test(id)) return false;
+  if (PRUNE_BY_DEFAULT[g.category]) return !PRUNE_NO[g.category]?.test(id);
+  return !!PRUNE_YES[g.category]?.test(id);
+}
+
 // Matches the feeding seasons in care.ts.
 const FEED_SEASONS: Record<Category, Season[]> = {
   herb: ['spring', 'summer', 'autumn'], vegetable: ['spring', 'summer', 'autumn'], fruit: ['spring', 'summer', 'autumn'],
@@ -103,6 +126,7 @@ export function dueFor(key: SortKey, p: Plant, weather: Weather | null, loc: Loc
     }
     case 'prune': {
       if (p.todos.some((t) => t.kind === 'prune')) return due(0);
+      if (!needsPruning(g)) return NEVER("Don't prune");
       return due(daysUntil(PRUNE[g.category], loc, now));
     }
     case 'propagate': {

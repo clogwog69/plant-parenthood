@@ -13,6 +13,7 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
   const { editPlant } = useStore();
   const [place, setPlace] = useState<Place>(plant.place);
   const [potted, setPotted] = useState<'pot' | 'ground'>(plant.potted ? 'pot' : 'ground');
+  const [cover, setCover] = useState<'open' | 'covered'>(plant.covered ? 'covered' : 'open');
   const [nickname, setNickname] = useState(plant.nickname ?? '');
   const was = stageOf(plant);
   const [stage, setStage] = useState<Stage | null>(was);
@@ -40,6 +41,7 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
     editPlant(plant.id, {
       place,
       potted: place === 'indoor' || potted === 'pot',
+      covered: place === 'garden' && cover === 'covered' ? true : undefined,
       nickname,
       // Only restart the clock when the stage was changed, so it keeps growing up.
       ...(stage !== was ? { age: stage ? { stage, at: Date.now(), ...(stage === guessed ? { fromPhoto: true } : {}) } : undefined } : {}),
@@ -54,7 +56,10 @@ export function EditPlantSheet({ plant, onClose }: { plant: Plant; onClose(): vo
         <h2>Where does it live?</h2>
         <Segmented value={place} onChange={setPlace} options={[{ value: 'garden', label: 'Garden' }, { value: 'indoor', label: 'Indoors' }]} />
         {place === 'garden' && (
-          <Segmented value={potted} onChange={setPotted} options={[{ value: 'pot', label: 'In a pot' }, { value: 'ground', label: 'In the ground' }]} />
+          <>
+            <Segmented value={potted} onChange={setPotted} options={[{ value: 'pot', label: 'In a pot' }, { value: 'ground', label: 'In the ground' }]} />
+            <Segmented value={cover} onChange={setCover} options={[{ value: 'open', label: 'Open to the rain' }, { value: 'covered', label: 'Under cover' }]} />
+          </>
         )}
       </section>
 

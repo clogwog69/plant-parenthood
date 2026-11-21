@@ -4,6 +4,7 @@ import { AddPlant } from './screens/AddPlant';
 import { CheckinScreen } from './screens/Checkin';
 import { Doctor } from './screens/Doctor';
 import { PlantDetail } from './screens/PlantDetail';
+import { Sitter } from './screens/Sitter';
 import { Plants } from './screens/Plants';
 import { Today } from './screens/Today';
 import { useStore } from './store';
@@ -27,6 +28,9 @@ function useRoute(): string {
 export function App() {
   const route = useRoute();
   const { ready } = useStore();
+  // A Bud-sitter's link: just the watering plan, nothing of the household.
+  const sit = route.match(/^\/sit\/([a-z0-9]+)$/);
+  if (sit) return <div className="app"><Sitter token={sit[1]} /></div>;
   if (!ready) return <div className="app" />;
 
   const plant = route.match(/^\/plant\/([^/]+)(\/checkin)?$/);

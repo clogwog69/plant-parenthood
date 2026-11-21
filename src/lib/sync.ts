@@ -52,3 +52,16 @@ export async function pushFn<T>(body: object): Promise<T> {
   if (!res.ok) throw new SetupError(`push ${res.status}`);
   return (await res.json()) as T;
 }
+
+// --- Bud-sitters: someone minding the plants while the household is away ---
+
+export interface Sitter { token: string; name: string; email: string | null; starts: string; ends: string }
+export interface SitView { name: string; starts: string; ends: string; house: string; location: Location | null; plants: Plant[] }
+
+export const addSitter = (code: string, name: string, email: string, starts: string, ends: string) =>
+  rpc<string | null>('sprout_add_sitter', { p_code: code, p_name: name, p_email: email, p_starts: starts, p_ends: ends });
+export const listSitters = (code: string) => rpc<Sitter[]>('sprout_list_sitters', { p_code: code });
+export const removeSitter = (code: string, token: string) => rpc<boolean>('sprout_remove_sitter', { p_code: code, p_token: token });
+export const sitPull = (token: string) => rpc<SitView | null>('sprout_sit_pull', { p_token: token });
+export const sitWater = (token: string, plant: string) => rpc<Plant | null>('sprout_sit_water', { p_token: token, p_plant: plant });
+export const sitLink = (token: string) => `${location.origin}${location.pathname}#/sit/${token}`;

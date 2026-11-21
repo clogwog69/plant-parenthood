@@ -20,6 +20,7 @@ export async function getWeather(loc: Location): Promise<Weather> {
     const url =
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
       '&current=temperature_2m,weather_code' +
+      '&hourly=precipitation' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max' +
       '&past_days=3&forecast_days=7&timezone=auto';
     const res = await fetch(url);
@@ -34,12 +35,26 @@ export async function getWeather(loc: Location): Promise<Weather> {
       rainChance: d.precipitation_probability_max?.[i] ?? null,
       code: d.weather_code[i] ?? 0,
     }));
+    // What has really fallen today, hour by hour up to now (the daily total also counts rain still to come).
+    const now = String(j.current.time);
+    const today = now.slice(0, 10);
+    const off = (j.utc_offset_seconds ?? 0) * 1000;
+    let rainToday = 0;
+    let rainTodayAt: number | undefined;
+    (j.hourly?.time ?? []).forEach((t: string, i: number) => {
+      const mm = j.hourly.precipitation?.[i] ?? 0;
+      if (t.slice(0, 10) !== today || t > now || mm <= 0) return;
+      rainToday += mm;
+      rainTodayAt = Date.parse(t + ':00Z') - off + HOUR;
+    });
     const weather: Weather = {
       fetchedAt: Date.now(),
       temp: j.current.temperature_2m,
       code: j.current.weather_code,
-      today: String(j.current.time).slice(0, 10),
+      today,
       days,
+      rainToday: Math.round(rainToday * 10) / 10,
+      rainTodayAt,
     };
     try { localStorage.setItem(CACHE, JSON.stringify({ key, weather })); } catch { /* full */ }
     return weather;

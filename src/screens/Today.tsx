@@ -1,12 +1,13 @@
 import { Bell, Camera, Check, ChevronRight, CloudRain, Droplet, Flame, MapPin, ScanSearch, Scissors, Settings, Shovel, Snowflake, Sparkles, Sprout, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { go } from '../App';
-import { DAY, alertsFor, allTasks, dueLabel, plantName, seasonFor, startOfDay } from '../lib/care';
+import { DAY, alertsFor, allTasks, dueLabel, plantName, seasonFor, startOfDay, waterPlan } from '../lib/care';
 import { needsHomeScreen, pushIsOn, pushSupported } from '../lib/push';
 import { syncAvailable } from '../lib/sync';
 import type { Plant, Task } from '../lib/types';
 import { describe } from '../lib/weather';
 import { useStore } from '../store';
+import { SittersSheet } from '../ui/Sitters';
 import { Avatar, HouseholdSheet, InstallNudge, LocationSheet, SettingsSheet, SkyIcon } from '../ui/bits';
 
 const DID = { watered: 'watered', repotted: 'repotted', harvested: 'picked from', fed: 'fed', added: 'added' };
@@ -77,12 +78,38 @@ function TaskRow({ task, plant, upcoming }: { task: Task; plant: Plant; upcoming
   );
 }
 
+const names = (ps: Plant[]) => {
+  const n = ps.map(plantName);
+  return n.length > 3 ? `${n.slice(0, 3).join(', ')} and ${n.length - 3} more` : n.length > 1 ? `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}` : n[0];
+};
+
+/** What the rain has done, or is about to do, so nobody has to tick those plants off. */
+function RainCard({ rained: all, coming, yesterday }: { rained: Plant[]; coming: Plant[]; yesterday: boolean }) {
+  const rained = all.filter((p) => !coming.includes(p));
+  if (!rained.length && !coming.length) return null;
+  return (
+    <section className="rain-card">
+      <CloudRain size={22} />
+      <div>
+        {rained.length > 0 && (
+          <p><b>The rain watered {names(rained)} {yesterday ? 'yesterday' : 'today'}.</b> Nothing to do for {rained.length > 1 ? 'them' : 'it'}.</p>
+        )}
+        {coming.length > 0 && (
+          <p><b>Rain is on the way, so skip {names(coming)}.</b> {coming.length > 1 ? 'They tick' : 'It ticks'} itself off once it falls.</p>
+        )}
+        <div className="rain-faces">{[...rained, ...coming].slice(0, 8).map((p) => <a key={p.id} href={`#/plant/${p.id}`} aria-label={plantName(p)}><Avatar plant={p} /></a>)}</div>
+      </div>
+    </section>
+  );
+}
+
 export function Today() {
   const { plants, weather, weatherFailed, location, house } = useStore();
   const [sheet, setSheet] = useState(false);
   const [sharing, setSharing] = useState<false | 'create' | 'join'>(false);
   const [nudge, setNudge] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [sitters, setSitters] = useState(false);
   useEffect(() => {
     if (!house || localStorage.getItem('sprout.pushNudge')) { setNudge(false); return; }
     if (needsHomeScreen()) { setNudge(false); return; } // the Home Screen reminder covers this
@@ -105,7 +132,13 @@ export function Today() {
   const byId = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
   const tasks = useMemo(() => allTasks(plants, weather, location), [plants, weather, location]);
   const alerts = useMemo(() => alertsFor(plants, weather), [plants, weather]);
-  const now = tasks.filter((t) => t.dueIn <= 0);
+  const coming = tasks.filter((t) => t.dueIn <= 0 && t.skipped).map((t) => byId.get(t.plantId)!).filter(Boolean);
+  const now = tasks.filter((t) => t.dueIn <= 0 && !t.skipped);
+  const rain = useMemo(() => {
+    const since = startOfDay(Date.now()) - DAY;
+    const hit = plants.filter((p) => { const r = waterPlan(p, weather, location).rainedAt; return !!r && r >= since; });
+    return { plants: hit, yesterday: hit.length > 0 && hit.every((p) => (waterPlan(p, weather, location).rainedAt ?? 0) < startOfDay(Date.now())) };
+  }, [plants, weather, location]);
   const later = tasks.filter((t) => t.dueIn > 0 && t.dueIn <= 6);
   const todo = now.filter((t) => !t.skipped).length;
 
@@ -192,6 +225,8 @@ export function Today() {
         </div>
       ))}
 
+      {plants.length > 0 && <RainCard rained={rain.plants} coming={coming} yesterday={rain.yesterday} />}
+
       {plants.length === 0 ? (
         <section className="empty">
           <img className="empty-logo" src="./logo.png" alt="" width="150" height="150" />
@@ -234,7 +269,8 @@ export function Today() {
       )}
 
       {sheet && <LocationSheet onClose={() => setSheet(false)} />}
-      {settings && <SettingsSheet onClose={() => setSettings(false)} onShare={() => { setSettings(false); setSharing('create'); }} />}
+      {settings && <SettingsSheet onClose={() => setSettings(false)} onShare={() => { setSettings(false); setSharing('create'); }} onSitters={() => { setSettings(false); setSitters(true); }} />}
+      {sitters && <SittersSheet onClose={() => setSitters(false)} />}
       {sharing && <HouseholdSheet initial={sharing} onClose={() => setSharing(false)} />}
     </main>
   );

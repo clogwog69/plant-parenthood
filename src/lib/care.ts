@@ -44,17 +44,23 @@ function todayIndex(w: Weather | null): number {
   return w ? w.days.findIndex((d) => d.date === w.today) : -1;
 }
 
+/** Enough rain to count as a proper watering. */
+const RAIN_MM = 5;
+
 export interface WaterPlan {
   dueIn: number;
   every: number;
   reason: string;
   skipped?: boolean;
+  /** When rain did the last watering, if it did. */
+  rainedAt?: number;
 }
 
 export function waterPlan(plant: Plant, weather: Weather | null, loc: Location | null, now = Date.now()): WaterPlan {
   const g = guideFor(plant.guideKey, plant.species);
   const season = seasonFor(loc, now);
   const outdoor = plant.place === 'garden';
+  const rainy = outdoor && !plant.covered;
   const idx = todayIndex(weather);
   let factor = 1;
   let why = '';
@@ -87,13 +93,17 @@ export function waterPlan(plant: Plant, weather: Weather | null, loc: Location |
   let reason = why ? `${why}. ${base}.` : `${base}.`;
 
   let last = plant.lastWatered;
-  if (outdoor && weather && idx > 0) {
+  let rainedAt: number | undefined;
+  if (rainy && weather && (weather.rainToday ?? 0) >= RAIN_MM && weather.rainTodayAt && (!last || weather.rainTodayAt > last)) {
+    last = rainedAt = Math.min(weather.rainTodayAt, now);
+    reason = `${Math.round(weather.rainToday!)} mm of rain today did the watering. ${base}.`;
+  } else if (rainy && weather && idx > 0) {
     for (let i = idx - 1; i >= 0; i--) {
       const d = weather.days[i];
-      if (d.rain >= 5) {
+      if (d.rain >= RAIN_MM) {
         const t = new Date(d.date + 'T12:00').getTime();
         if (!last || t > last) {
-          last = t;
+          last = rainedAt = t;
           reason = `${Math.round(d.rain)} mm of rain on ${weekday(d.date)} did the last watering. ${base}.`;
         }
         break;
@@ -115,10 +125,10 @@ export function waterPlan(plant: Plant, weather: Weather | null, loc: Location |
     }
   }
 
-  if (outdoor && weather && idx >= 0 && dueIn <= 1) {
+  if (rainy && weather && idx >= 0 && dueIn <= 1) {
     for (let i = idx; i <= idx + 1 && i < weather.days.length; i++) {
       const d = weather.days[i];
-      if (d.rain >= 5 && (d.rainChance ?? 100) >= 60) {
+      if (d.rain >= RAIN_MM && (d.rainChance ?? 100) >= 60 && !(i === idx && (weather.rainToday ?? 0) >= RAIN_MM)) {
         return {
           dueIn: Math.min(dueIn, 0),
           every,
@@ -129,7 +139,7 @@ export function waterPlan(plant: Plant, weather: Weather | null, loc: Location |
     }
   }
 
-  return { dueIn, every, reason };
+  return { dueIn, every, reason, rainedAt };
 }
 
 export function repotStatus(plant: Plant, loc: Location | null, now = Date.now()): { due: boolean; note: string } | null {

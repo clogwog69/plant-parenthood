@@ -20,6 +20,7 @@ export interface NewPlant {
   nickname?: string;
   place: Place;
   potted: boolean;
+  covered?: boolean;
   lastWatered?: number;
   shot?: Shot;
   tag?: TagInfo;
@@ -50,7 +51,7 @@ interface Store {
   addPhoto(id: string, shot: Shot): void;
   setTag(id: string, tag: TagInfo | undefined): void;
   /** Change what it is, where it lives or its nickname. */
-  editPlant(id: string, changes: Partial<Pick<Plant, 'guideKey' | 'species' | 'nickname' | 'place' | 'potted' | 'age'>>): void;
+  editPlant(id: string, changes: Partial<Pick<Plant, 'guideKey' | 'species' | 'nickname' | 'place' | 'potted' | 'covered' | 'age'>>): void;
   /** Save how much sun it gets through the day. Empty clears it. */
   setSun(id: string, sun: Plant['sun']): void;
   /** Fold what the photo diagnosis found into a check-in. */
@@ -308,7 +309,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const photoId = n.shot ? uid() : undefined;
         const plant: Plant = {
           id, guideKey: n.guideKey, species: n.species, nickname: n.nickname || undefined,
-          place: n.place, potted: n.potted, createdAt: now, updatedAt: now,
+          place: n.place, potted: n.potted, covered: n.covered || undefined, createdAt: now, updatedAt: now,
           thumb: n.shot?.thumb, photoId, lastWatered: n.lastWatered, tag: n.tag,
           age: n.stage ? { stage: n.stage, at: now, ...(n.stageFromPhoto ? { fromPhoto: true } : {}) } : undefined,
           firstPhoto: n.shot && photoId ? { photoId, thumb: n.shot.thumb, date: now } : undefined,

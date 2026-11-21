@@ -26,6 +26,7 @@ export function AddPlant() {
   const [custom, setCustom] = useState<Category | null>(null);
   const [place, setPlace] = useState<Place>('garden');
   const [potted, setPotted] = useState<'pot' | 'ground'>('pot');
+  const [cover, setCover] = useState<'open' | 'covered'>('open');
   const [nickname, setNickname] = useState('');
   const [watered, setWatered] = useState<Watered>('unsure');
   const [stage, setStage] = useState<Stage | null>(null);
@@ -97,6 +98,7 @@ export function AddPlant() {
       nickname: nickname.trim(),
       place,
       potted: place === 'indoor' || potted === 'pot',
+      covered: place === 'garden' && cover === 'covered',
       lastWatered,
       shot,
       tag,
@@ -174,7 +176,10 @@ export function AddPlant() {
         <h2>Where does it live?</h2>
         <Segmented value={place} onChange={setPlace} options={[{ value: 'garden', label: 'Garden' }, { value: 'indoor', label: 'Indoors' }]} />
         {place === 'garden' && (
-          <Segmented value={potted} onChange={setPotted} options={[{ value: 'pot', label: 'In a pot' }, { value: 'ground', label: 'In the ground' }]} />
+          <>
+            <Segmented value={potted} onChange={setPotted} options={[{ value: 'pot', label: 'In a pot' }, { value: 'ground', label: 'In the ground' }]} />
+            <Segmented value={cover} onChange={setCover} options={[{ value: 'open', label: 'Open to the rain' }, { value: 'covered', label: 'Under cover' }]} />
+          </>
         )}
         {spot && (
           <div className="spot">

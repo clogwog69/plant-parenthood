@@ -101,7 +101,7 @@ export function PlantDetail({ id }: { id: string }) {
 
   const about = () => ({
     plant: plant.species, latin: g.latin, type: CATEGORY_LABEL[g.category],
-    lives: `${plant.place === 'garden' ? 'outdoors' : 'indoors'}, ${plant.potted ? 'in a pot' : 'in the ground'}`,
+    lives: `${plant.place === 'garden' ? 'outdoors' : 'indoors'}${plant.place === 'garden' && plant.covered ? ' under cover, out of the rain' : ''}, ${plant.potted ? 'in a pot' : 'in the ground'}`,
     season, town: location?.name,
     age: stage ? `${STAGE_LABEL[stage].toLowerCase()}, about ${Math.round(ageDays(plant)!)} days old` : undefined,
     lastWatered: plant.lastWatered ? ago(plant.lastWatered) : 'unknown',
@@ -147,6 +147,7 @@ export function PlantDetail({ id }: { id: string }) {
         <p className="tags">
           <span>{plant.place === 'garden' ? 'Garden' : 'Indoors'}</span>
           <span>{plant.potted ? 'In a pot' : 'In the ground'}</span>
+          {plant.place === 'garden' && plant.covered && <span>Under cover</span>}
           <span>{CATEGORY_LABEL[g.category]}</span>
           {stage && stage !== 'grown' && <span className="tag-young">{STAGE_LABEL[stage]}</span>}
         </p>

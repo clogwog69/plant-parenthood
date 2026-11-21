@@ -121,6 +121,8 @@ export interface Plant {
   nickname?: string;
   place: Place;
   potted: boolean;
+  /** Outdoors but sheltered (a verandah, a greenhouse), so rain does not reach it. */
+  covered?: boolean;
   createdAt: number;
   /** Last change on any phone; the newest copy wins when syncing. */
   updatedAt?: number;
@@ -172,6 +174,9 @@ export interface Weather {
   code: number;
   today: string;
   days: DayWeather[]; // includes a few past days
+  /** Rain that has actually fallen today so far, in mm, and when the last of it fell. */
+  rainToday?: number;
+  rainTodayAt?: number;
 }
 
 export type TaskKind = 'water' | 'feed' | 'repot' | 'harvest' | 'photo' | 'todo';

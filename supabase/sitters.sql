@@ -1,4 +1,4 @@
--- Plant Parenthood: Bud-sitters. A private link that lets someone mind the
+-- Plant Parenthood: Plant sitters. A private link that lets someone mind the
 -- plants while you are away: they see the watering plan between two dates,
 -- and can tick plants off as watered. Nothing else in the household.
 -- Run this once in Supabase > SQL Editor. Safe to run again.

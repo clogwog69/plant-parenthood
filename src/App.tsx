@@ -28,7 +28,7 @@ function useRoute(): string {
 export function App() {
   const route = useRoute();
   const { ready } = useStore();
-  // A Bud-sitter's link: just the watering plan, nothing of the household.
+  // A plant sitter's link: just the watering plan, nothing of the household.
   const sit = route.match(/^\/sit\/([a-z0-9]+)$/);
   if (sit) return <div className="app"><Sitter token={sit[1]} /></div>;
   if (!ready) return <div className="app" />;

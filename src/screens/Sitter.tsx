@@ -82,7 +82,7 @@ export function Sitter({ token }: { token: string }) {
   return (
     <main className="screen sit">
       <header>
-        <p className="eyebrow">Bud-sitting for {view.house}</p>
+        <p className="eyebrow">Plant sitting for {view.house}</p>
         <h1>Hi {view.name}</h1>
         <p className="muted">
           {notYet ? `Your sit starts ${long(day(view.starts))}. ` : ''}

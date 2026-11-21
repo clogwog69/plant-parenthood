@@ -13,7 +13,7 @@ function invite(s: Sitter, house: string) {
   return { subject, body };
 }
 
-/** Bud-sitters: someone who minds the plants while the household is away. */
+/** Plant sitters: someone who minds the plants while the household is away. */
 export function SittersSheet({ onClose }: { onClose(): void }) {
   const { house } = useStore();
   const [list, setList] = useState<Sitter[] | null>(null);
@@ -27,7 +27,7 @@ export function SittersSheet({ onClose }: { onClose(): void }) {
 
   useEffect(() => {
     if (!house) return;
-    listSitters(house.code).then(setList).catch(() => { setList([]); setNote('Could not load your Bud-sitters. Check your connection.'); });
+    listSitters(house.code).then(setList).catch(() => { setList([]); setNote('Could not load your plant sitters. Check your connection.'); });
   }, [house]);
 
   if (!house) return null;
@@ -43,7 +43,7 @@ export function SittersSheet({ onClose }: { onClose(): void }) {
       setList((l) => [...(l ?? []), s]);
       setName(''); setEmail('');
       if (s.email) send(s);
-    } catch { setNote('Could not make the link. Check your connection, or the database may need its Bud-sitter update.'); }
+    } catch { setNote('Could not make the link. Check your connection, or the database may need its plant sitter update.'); }
     setBusy(false);
   };
 
@@ -66,12 +66,12 @@ export function SittersSheet({ onClose }: { onClose(): void }) {
   };
 
   return (
-    <Sheet title="Bud-sitters" onClose={onClose}>
+    <Sheet title="Plant sitters" onClose={onClose}>
       <p className="muted">Going away? Give a friend a private link with the watering plan for those days. They can tick plants off as they water, and you will see it here. The link stops working the day after.</p>
 
       {list && list.length > 0 && (
         <section className="group">
-          <h2>Your Bud-sitters</h2>
+          <h2>Your plant sitters</h2>
           <ul className="tasks">
             {list.map((s) => (
               <li key={s.token} className="sitter-row">
@@ -92,7 +92,7 @@ export function SittersSheet({ onClose }: { onClose(): void }) {
       )}
 
       <section className="group">
-        <h2>Add a Bud-sitter</h2>
+        <h2>Add a plant sitter</h2>
         <label className="field"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Their name" maxLength={40} /></label>
         <label className="field"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email (optional)" maxLength={120} autoComplete="off" /></label>
         <div className="dates">

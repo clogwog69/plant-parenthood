@@ -53,7 +53,7 @@ export async function pushFn<T>(body: object): Promise<T> {
   return (await res.json()) as T;
 }
 
-// --- Bud-sitters: someone minding the plants while the household is away ---
+// --- Plant sitters: someone minding the plants while the household is away ---
 
 export interface Sitter { token: string; name: string; email: string | null; starts: string; ends: string }
 export interface SitView { name: string; starts: string; ends: string; house: string; location: Location | null; plants: Plant[] }

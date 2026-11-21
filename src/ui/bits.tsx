@@ -175,7 +175,7 @@ export function SettingsSheet({ onClose, onShare, onSitters }: { onClose(): void
       {house && onSitters && (
         <button type="button" className="doctor-card" onClick={onSitters}>
           <span className="doctor-ico"><Plane size={22} /></span>
-          <span><b>Going away? Add a Bud-sitter</b><small>Give a friend the watering plan for the days you are gone.</small></span>
+          <span><b>Going away? Add a plant sitter</b><small>Give a friend the watering plan for the days you are gone.</small></span>
         </button>
       )}
       {house && <p className="muted small">{me ? `You are ${me}, in ${house.name}. ` : ''}These choices are for this phone only. Everyone else picks their own.</p>}

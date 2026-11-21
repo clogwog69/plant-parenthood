@@ -416,7 +416,7 @@ h1 { font: 600 32px/1.1 var(--serif); letter-spacing: -0.02em; }
 .sun-hot svg { flex: none; margin-top: 2px; }
 .sun-hot.ok { background: var(--green-soft); color: var(--green); }
 
-/* Bud-sitters */
+/* Plant sitters */
 .check.on { background: var(--green); color: #fff; border-color: var(--green); }
 .sit .task-plant svg { vertical-align: -1px; }
 .sitter-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
